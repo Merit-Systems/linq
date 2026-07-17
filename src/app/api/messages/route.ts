@@ -4,7 +4,6 @@ import { messageCreateParamsSchema } from "@/lib/schemas/linq/params/message-cre
 import { messageCreateResponseSchema } from "@/lib/schemas/linq/responses/message-responses";
 import { quoteMessageSendPrice, maxMessageSendPrice } from "@/lib/routing/_shared/message-pricing";
 import { validateColdOutbound } from "@/lib/routing/_shared/first-message-validate";
-import { MESSAGES_CREATE_DESCRIPTION } from "@/lib/routing/route-descriptions";
 import { router, paidOpts } from "@/lib/router";
 
 export const POST = router
@@ -17,5 +16,7 @@ export const POST = router
     await validateColdOutbound("messages/create", { body });
   })
   .output(messageCreateResponseSchema)
-  .description(MESSAGES_CREATE_DESCRIPTION)
+  .description(
+    "Linq Messages — Send on iMessage, fallback to RCS then SMS. Reuses existing chats. New recipients (cold) cost more than warm; cold openers must be text-only. Exact price from the 402 quote. See discovery guidance for pricing, media, and overrides.",
+  )
   .handler(handleMessagesCreate);

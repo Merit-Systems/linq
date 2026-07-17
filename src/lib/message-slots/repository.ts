@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { ASSIGNED_FROM_LINE } from "@/lib/routing/_shared/constants";
 import { canonicalPhoneNumber } from "@/lib/routing/_shared/phone-number";
 import {
   dailyCounterKey,
@@ -44,6 +45,28 @@ export async function isPairWarm(from: string, to: string): Promise<boolean> {
     select: { id: true },
   });
   return row !== null;
+}
+
+export async function lookupRecipientWarmth(
+  recipients: string[],
+): Promise<Map<string, { chatId: string | null }>> {
+  const fromLine = canonicalPhoneNumber(ASSIGNED_FROM_LINE);
+  const canonicalRecipients = recipients.map((to) => canonicalPhoneNumber(to));
+  if (canonicalRecipients.length === 0) {
+    return new Map();
+  }
+
+  const rows = await prisma.recipientWarmth.findMany({
+    where: {
+      fromLine,
+      recipient: { in: canonicalRecipients },
+    },
+    select: { recipient: true, chatId: true },
+  });
+
+  return new Map(
+    rows.map((row) => [row.recipient, { chatId: row.chatId }]),
+  );
 }
 
 export async function markPairWarm(

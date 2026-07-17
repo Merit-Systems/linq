@@ -46,7 +46,7 @@ See [stablelinq.dev/llms.txt](https://stablelinq.dev/llms.txt) for agent guidanc
 - **Warm follow-ups** (existing chat or warm pair): surge **$0.05–$1.25**, **6000/day** UTC cap
 - **Per-request bounds:** `POST /api/messages` up to **$26.25** (mixed: 50 cold × $0.50 + max surge); cold-only same request up to **$25.00**; follow-ups/voicememo **$0.05–$1.25**
 - **All other paid endpoints**: **$0.02** flat
-- **Reads**: free with SIWX — ledger via `GET /api/account/sent-messages` and `GET /api/account/chats` (wallet-scoped); thread history via `GET /api/account/chats/{chatId}/messages` (line-known chats)
+- **Reads**: free with SIWX — ledger via `GET /api/account/sent-messages` and `GET /api/account/chats` (wallet-scoped); thread history via `GET /api/account/chats/{chatId}/messages` (line-known chats); warmth pre-check via `POST /api/messages/warmth` (line-wide, free)
 
 ## Route backends
 
@@ -54,7 +54,7 @@ See [stablelinq.dev/llms.txt](https://stablelinq.dev/llms.txt) for agent guidanc
 |---------|--------|------|
 | `linq-write` | Paid Linq proxies (send, own-message mutators, …) | x402 / MPP |
 | `linq-read` | `GET /account/chats/{chatId}/messages` (thread history) | SIWX |
-| `stablelinq-db` | `GET /account/sent-messages`, `GET /account/chats`, … | SIWX |
+| `stablelinq-db` | `GET /account/sent-messages`, `GET /account/chats`, `POST /messages/warmth`, … | SIWX |
 | `stablelinq-webhook` | `POST /webhooks/linq` (line status → Discord) | HMAC |
 
 All agents share one outbound line (**+12052438809**). Ledger reads return **only messages the authenticated wallet paid to send**. Thread reads return the full conversation on a StableLinq-known chat (inbound + all line outbound). Warmth and daily caps are **line-wide** (shared across agents). Chat-level mutators (rename, read receipts, typing, participants) are not exposed — multiple agents may send in the same chat and to the same recipient.

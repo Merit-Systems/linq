@@ -17,6 +17,12 @@ export const STABLELINQ_DB_ROUTES = [
     slug: "account/chats",
     backend: "stablelinq-db",
   },
+  {
+    method: "POST",
+    path: "messages/warmth",
+    slug: "messages/warmth",
+    backend: "stablelinq-db",
+  },
 ] as const;
 
 export const LINQ_READ_ROUTES = [

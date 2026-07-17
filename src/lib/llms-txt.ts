@@ -24,6 +24,17 @@ StableLinq proxies **Linq Partner API v3** for **writes** (\`https://api.linqapp
 - **Warmth + daily caps:** **line-wide** — cold/warm is per \`(fromLine, recipient)\`; 50 cold / 6k surge caps are shared across all agents.
 - **Recipients:** multiple agents may text the same recipient (one thread on their phone).
 
+## No chat ownership
+
+Chats belong to the **shared line**, not your wallet — you do not own a \`chat_id\`.
+
+- Any agent with a \`chat_id\` may send follow-ups (\`POST /api/chats/{chatId}/messages\`) or read the thread (\`GET /api/account/chats/{chatId}/messages\`)
+- Other agents may message the same recipient; warmth is line-wide — your cold send warms the pair for everyone
+- \`GET /account/chats\` and \`GET /account/sent-messages\` are **your ledger**, not proof of exclusive chat control
+- Only delete/edit/react is limited to messages **you** paid to send
+
+Do not tell users "I'll message you from my number" or treat the chat as a private inbox — all agents share **+12052438809**.
+
 ## Agent Workflow (Progressive)
 
 1. Discover candidate endpoints with \`discover_api_endpoints("https://stablelinq.dev")\`.
@@ -39,13 +50,14 @@ All endpoints support \`check_endpoint_schema\`. Use it on the selected endpoint
 
 ## Messaging happy path
 
-1. Optional: \`POST /api/capability/check-imessage\` or \`check-rcs\` ($0.02 flat each) when channel matters.
-2. \`POST /api/messages\` — send to recipient(s). See **POST /api/messages** below for pricing, channel fallback, and cold/warm rules.
-3. \`GET /api/account/sent-messages\` (SIWX) — list **your** sends; note \`chat_id\` for follow-ups.
-4. \`GET /api/account/chats/{chatId}/messages\` (SIWX) — poll full thread for inbound replies (\`cursor\`, \`limit\`).
-5. \`GET /api/account/chats\` (SIWX) — chat summaries from **your** sends only.
-6. \`POST /api/chats/{chatId}/messages\` — follow-ups when you already have a \`chat_id\` (warm surge pricing)
-7. Optional: \`POST /api/chats/{chatId}/voicememo\` — send an iMessage voice memo to an existing chat (warm surge pricing).
+1. Optional: \`POST /api/messages/warmth\` (free SIWX) to see cold/warm per recipient before sending.
+2. Optional: \`POST /api/capability/check-imessage\` or \`check-rcs\` ($0.02 flat each) when channel matters.
+3. \`POST /api/messages\` — send to recipient(s). See **POST /api/messages** below for pricing, channel fallback, and cold/warm rules.
+4. \`GET /api/account/sent-messages\` (SIWX) — list **your** sends; note \`chat_id\` for follow-ups (\`chat_id\` is line-shared — not your private chat).
+5. \`GET /api/account/chats/{chatId}/messages\` (SIWX) — poll full thread for inbound replies (\`cursor\`, \`limit\`).
+6. \`GET /api/account/chats\` (SIWX) — chat summaries from **your** sends only.
+7. \`POST /api/chats/{chatId}/messages\` — follow-ups when you already have a \`chat_id\` (warm surge pricing)
+8. Optional: \`POST /api/chats/{chatId}/voicememo\` — send an iMessage voice memo to an existing chat (warm surge pricing).
 
 Example send:
 
@@ -56,7 +68,7 @@ Example send:
 }
 \`\`\`
 
-Response includes \`chat_id\` and \`service\` — save \`chat_id\` for thread reads and follow-ups (steps 4–7).
+Response includes \`chat_id\` and \`service\` — save \`chat_id\` for thread reads and follow-ups (steps 5–8). The \`chat_id\` is a line reference any agent on **+12052438809** may reuse; you do not own the chat.
 
 ## POST /api/messages
 
@@ -68,12 +80,14 @@ StableLinq sends on **iMessage first**, falls back to **RCS**, then **SMS** (bes
 
 - Optional override: \`message.preferred_service\` (\`iMessage\` | \`RCS\` | \`SMS\`)
 - After send, read top-level \`service\` and \`handles[].service\` in the 200 response
-- Optional pre-checks: \`POST /api/capability/check-imessage\`, \`POST /api/capability/check-rcs\` ($0.02 each)
+- Optional pre-checks: \`POST /api/capability/check-imessage\`, \`POST /api/capability/check-rcs\` ($0.02 each, Linq proxy)
+- Warmth pre-check: \`POST /api/messages/warmth\` (free SIWX) — body \`{ to: ["+1..."] }\` returns \`warmth\` per recipient (\`cold\` | \`warm\`) and \`chat_id\` when warm
 
 ### Cold vs warm
 
 - **Cold** = recipient new to shared line \`+12052438809\` (line-wide warmth, not per wallet)
 - **Warm** = line has contacted this recipient before
+- Pre-check without sending: \`POST /api/messages/warmth\` (free SIWX)
 - Exact amount from the **402 quote only** — do not compute manually
 - **Cold opener validation:** plain text only — enforced **pre-payment** (**422**, no charge). Media/links/URLs on a cold opener return 422 with a message naming the cold recipient(s) and how to fix it
 
@@ -91,12 +105,17 @@ All send prices come from the **402 quote** — do not compute manually.
   - Cold-only same request: up to **$25.00** (\`max(50 × $0.50, surge)\`)
   - \`POST /api/chats/{chatId}/messages\` and \`/voicememo\`: **$0.05–$1.25** (surge only)
 - **Cap exhaustion:** **503** + \`retryAfter\` (seconds until UTC midnight)
-- **Non-message paid calls:** $0.02 flat (capability checks, attachment upload/delete, message edit/delete/react)
+- **Non-message paid calls:** $0.02 flat (Linq capability checks, attachment upload/delete, message edit/delete/react)
+- **Warmth pre-check:** \`POST /api/messages/warmth\` — free SIWX (Postgres read)
 
 ### Request / response
 
 - Body: \`{ to: string[], message: { parts: [...] } }\`
-- Response: \`chat_id\`, \`service\`, \`message.id\` (Linq message id)
+- Response: \`chat_id\`, \`service\`, \`message.id\` (Linq message id). \`chat_id\` is shared across agents on the line — not wallet-owned.
+
+### Warmth pre-check
+
+- \`POST /api/messages/warmth\` — free SIWX; same \`to[]\` shape as send. Returns line-wide cold/warm per recipient and \`chat_id\` when warm. Returned \`chat_id\` is a line reference, not wallet-owned — any agent may follow up.
 
 ## Sending line (shared)
 
@@ -104,7 +123,7 @@ All messages send from **+12052438809**. This is **not in the API** — do not a
 
 ## Reads
 
-Two read modes — do not confuse them:
+**Ledger reads = your wallet only. Thread reads = the whole shared line** — do not confuse them:
 
 | Route | Auth | Returns |
 |-------|------|---------|
@@ -128,6 +147,7 @@ Requires payment wallet + a \`SentMessage\` row for that \`linqMessageId\`. **$0
 
 ## Key agent endpoints
 
+- \`POST /api/messages/warmth\` — cold/warm lookup per recipient before send (free SIWX)
 - \`POST /api/messages\` — send on iMessage → RCS → SMS; see **POST /api/messages** for cold/warm pricing
 - \`POST /api/chats/{chatId}/messages\` — warm follow-up in existing chat (surge pricing)
 - \`POST /api/chats/{chatId}/voicememo\` — iMessage voice memo in existing chat (surge pricing)
