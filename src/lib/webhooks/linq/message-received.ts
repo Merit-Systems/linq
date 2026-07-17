@@ -8,6 +8,7 @@ const chatHandleSchema = z.object({
 export const messageReceivedDataSchema = z
   .object({
     direction: z.enum(["inbound", "outbound"]).optional(),
+    is_from_me: z.boolean().optional(),
     chat: z.object({ id: z.string() }).optional(),
     chat_id: z.string().optional(),
     sender_handle: chatHandleSchema.optional(),
@@ -29,7 +30,11 @@ export type MessageReceivedData = z.infer<typeof messageReceivedDataSchema>;
 export function extractInboundRecipient(
   data: MessageReceivedData,
 ): { recipient: string; chatId: string | null } | null {
-  if (data.direction === "outbound" || data.message?.is_from_me === true) {
+  if (
+    data.direction === "outbound" ||
+    data.is_from_me === true ||
+    data.message?.is_from_me === true
+  ) {
     return null;
   }
 

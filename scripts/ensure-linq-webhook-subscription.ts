@@ -8,9 +8,11 @@ const SUBSCRIBED_EVENTS = [
   "message.received",
 ] as const;
 
+const WEBHOOK_VERSION = "2026-02-03";
+
 function targetUrl(): string {
   const base = env.BASE_URL.replace(/\/$/, "");
-  return `${base}/api/webhooks/linq`;
+  return `${base}/api/webhooks/linq?version=${WEBHOOK_VERSION}`;
 }
 
 function hasAllEvents(events: string[] | undefined): boolean {
@@ -55,6 +57,12 @@ async function main() {
   console.log(`  target_url: ${url}`);
   console.log(`  events: ${SUBSCRIBED_EVENTS.join(", ")}`);
   console.log(`  phone_numbers: ${ASSIGNED_FROM_LINE}`);
+  console.log(`  signing_secret: ${created.signing_secret}`);
+  console.log("");
+  console.log(
+    "Set LINQ_WEBHOOK_SECRET on Vercel (shown once — cannot be retrieved later):",
+  );
+  console.log(`  vercel env add LINQ_WEBHOOK_SECRET production preview`);
 }
 
 main().catch((err) => {
