@@ -64,7 +64,7 @@ Pay per call, quoted before you commit.
 | -------------------- | ------------------------------------------------------------------------- |
 | New recipient (cold) | $0.50 — text-only opener, 50/day cap                                      |
 | Follow-up (warm)     | $0.05–$1.25 surge pricing                                                 |
-| Unanswered limit     | 10 consecutive outbound without a reply — then blocked until they respond |
+| Unanswered limit     | 10 consecutive outbound without a reply — then blocked until they respond. If blocked but they replied and the webhook was missed, the next send reconciles from the Linq thread. |
 | Everything else      | $0.02 flat                                                                |
 | Reads                | Free with wallet auth                                                     |
 
