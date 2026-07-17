@@ -2,7 +2,10 @@ import { NextResponse } from "next/server";
 import { lookupRecipientWarmth } from "@/lib/message-slots/repository";
 import { ASSIGNED_FROM_LINE } from "@/lib/routing/_shared/constants";
 import { canonicalPhoneNumber } from "@/lib/routing/_shared/phone-number";
-import type { WarmthCheckParams } from "@/lib/schemas/stablelinq/warmth-check";
+import {
+  isSendBlocked,
+  type WarmthCheckParams,
+} from "@/lib/schemas/stablelinq/warmth-check";
 
 export async function handleMessagesWarmthCheck(ctx: {
   request: Request;
@@ -25,12 +28,16 @@ export async function handleMessagesWarmthCheck(ctx: {
         recipient: canonical,
         warmth: "warm" as const,
         chat_id: warm.chatId,
+        consecutive_unanswered_outbound: warm.consecutiveUnansweredOutbound,
+        send_blocked: isSendBlocked(warm.consecutiveUnansweredOutbound),
       };
     }
     return {
       recipient: canonical,
       warmth: "cold" as const,
       chat_id: null,
+      consecutive_unanswered_outbound: 0,
+      send_blocked: false,
     };
   });
 

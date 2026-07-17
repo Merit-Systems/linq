@@ -22,6 +22,7 @@ StableLinq proxies **Linq Partner API v3** for **writes** (\`https://api.linqapp
 - **Thread reads:** any SIWX agent may \`GET /api/account/chats/{chatId}/messages\` for a \`chatId\` StableLinq created on the line — includes recipient replies and **all agents' outbound** in that chat.
 - **Delete / edit / react:** only on **your** messages (\`linqMessageId\` you paid to send).
 - **Warmth + daily caps:** **line-wide** — cold/warm is per \`(fromLine, recipient)\`; 50 cold / 6k surge caps are shared across all agents.
+- **Unanswered limit:** **line-wide** — block the 11th consecutive outbound when a recipient has not replied after 10 messages; replying resets the streak.
 - **Recipients:** multiple agents may text the same recipient (one thread on their phone).
 
 ## No chat ownership
@@ -81,7 +82,7 @@ StableLinq sends on **iMessage first**, falls back to **RCS**, then **SMS** (bes
 - Optional override: \`message.preferred_service\` (\`iMessage\` | \`RCS\` | \`SMS\`)
 - After send, read top-level \`service\` and \`handles[].service\` in the 200 response
 - Optional pre-checks: \`POST /api/capability/check-imessage\`, \`POST /api/capability/check-rcs\` ($0.02 each, Linq proxy)
-- Warmth pre-check: \`POST /api/messages/warmth\` (free SIWX) — body \`{ to: ["+1..."] }\` returns \`warmth\` per recipient (\`cold\` | \`warm\`) and \`chat_id\` when warm
+- Warmth pre-check: \`POST /api/messages/warmth\` (free SIWX) — body \`{ to: ["+1..."] }\` returns \`warmth\` per recipient (\`cold\` | \`warm\`), \`chat_id\` when warm, \`consecutive_unanswered_outbound\`, and \`send_blocked\` when the 10-message streak is exhausted
 
 ### Cold vs warm
 
@@ -90,6 +91,7 @@ StableLinq sends on **iMessage first**, falls back to **RCS**, then **SMS** (bes
 - Pre-check without sending: \`POST /api/messages/warmth\` (free SIWX)
 - Exact amount from the **402 quote only** — do not compute manually
 - **Cold opener validation:** plain text only — enforced **pre-payment** (**422**, no charge). Media/links/URLs on a cold opener return 422 with a message naming the cold recipient(s) and how to fix it
+- **Unanswered limit:** if a warm recipient has **10 consecutive outbound messages without replying**, the next send returns **422** (line-wide, pre-payment). Replying resets the streak. Pre-check via \`POST /api/messages/warmth\` (\`send_blocked\`, \`consecutive_unanswered_outbound\`)
 
 ### Pricing
 
@@ -115,7 +117,7 @@ All send prices come from the **402 quote** — do not compute manually.
 
 ### Warmth pre-check
 
-- \`POST /api/messages/warmth\` — free SIWX; same \`to[]\` shape as send. Returns line-wide cold/warm per recipient and \`chat_id\` when warm. Returned \`chat_id\` is a line reference, not wallet-owned — any agent may follow up.
+- \`POST /api/messages/warmth\` — free SIWX; same \`to[]\` shape as send. Returns line-wide cold/warm per recipient, \`chat_id\` when warm, \`consecutive_unanswered_outbound\`, and \`send_blocked\`. Returned \`chat_id\` is a line reference, not wallet-owned — any agent may follow up.
 
 ## Sending line (shared)
 

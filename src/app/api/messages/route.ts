@@ -4,6 +4,7 @@ import { messageCreateParamsSchema } from "@/lib/schemas/linq/params/message-cre
 import { messageCreateResponseSchema } from "@/lib/schemas/linq/responses/message-responses";
 import { quoteMessageSendPrice, maxMessageSendPrice } from "@/lib/routing/_shared/message-pricing";
 import { validateColdOutbound } from "@/lib/routing/_shared/first-message-validate";
+import { assertUnansweredOutboundAllowed } from "@/lib/routing/_shared/unanswered-outbound-validate";
 import { router, paidOpts } from "@/lib/router";
 
 export const POST = router
@@ -14,6 +15,7 @@ export const POST = router
   .body(messageCreateParamsSchema)
   .validate(async (body) => {
     await validateColdOutbound("messages/create", { body });
+    await assertUnansweredOutboundAllowed({ slug: "messages/create", body });
   })
   .output(messageCreateResponseSchema)
   .description(

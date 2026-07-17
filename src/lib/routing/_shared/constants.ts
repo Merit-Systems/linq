@@ -1,3 +1,4 @@
 export const ASSIGNED_FROM_LINE = "+12052438809" as const;
 export const FIRST_OUTBOUND_PRICE_USD = 0.5;
 export const DAILY_OUTBOUND_FIRST_CAP = 50;
+export const MAX_CONSECUTIVE_UNANSWERED_OUTBOUND = 10;

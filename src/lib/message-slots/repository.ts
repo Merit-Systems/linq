@@ -49,7 +49,9 @@ export async function isPairWarm(from: string, to: string): Promise<boolean> {
 
 export async function lookupRecipientWarmth(
   recipients: string[],
-): Promise<Map<string, { chatId: string | null }>> {
+): Promise<
+  Map<string, { chatId: string | null; consecutiveUnansweredOutbound: number }>
+> {
   const fromLine = canonicalPhoneNumber(ASSIGNED_FROM_LINE);
   const canonicalRecipients = recipients.map((to) => canonicalPhoneNumber(to));
   if (canonicalRecipients.length === 0) {
@@ -61,12 +63,85 @@ export async function lookupRecipientWarmth(
       fromLine,
       recipient: { in: canonicalRecipients },
     },
-    select: { recipient: true, chatId: true },
+    select: {
+      recipient: true,
+      chatId: true,
+      consecutiveUnansweredOutbound: true,
+    },
   });
 
   return new Map(
-    rows.map((row) => [row.recipient, { chatId: row.chatId }]),
+    rows.map((row) => [
+      row.recipient,
+      {
+        chatId: row.chatId,
+        consecutiveUnansweredOutbound: row.consecutiveUnansweredOutbound,
+      },
+    ]),
   );
+}
+
+export async function getUnansweredOutboundCount(
+  from: string,
+  to: string,
+): Promise<number> {
+  const fromLine = canonicalPhoneNumber(from);
+  const recipient = canonicalPhoneNumber(to);
+  const row = await prisma.recipientWarmth.findUnique({
+    where: { fromLine_recipient: { fromLine, recipient } },
+    select: { consecutiveUnansweredOutbound: true },
+  });
+  return row?.consecutiveUnansweredOutbound ?? 0;
+}
+
+export async function incrementUnansweredOutbound(
+  from: string,
+  to: string,
+  chatId?: string,
+): Promise<void> {
+  const fromLine = canonicalPhoneNumber(from);
+  const recipient = canonicalPhoneNumber(to);
+  const now = new Date();
+  await prisma.recipientWarmth.upsert({
+    where: { fromLine_recipient: { fromLine, recipient } },
+    create: {
+      fromLine,
+      recipient,
+      consecutiveUnansweredOutbound: 1,
+      lastOutboundAt: now,
+      ...(chatId ? { chatId } : {}),
+    },
+    update: {
+      consecutiveUnansweredOutbound: { increment: 1 },
+      lastOutboundAt: now,
+      ...(chatId ? { chatId } : {}),
+    },
+  });
+}
+
+export async function resetUnansweredOutbound(
+  from: string,
+  to: string,
+  chatId?: string,
+  lastInboundAt: Date = new Date(),
+): Promise<void> {
+  const fromLine = canonicalPhoneNumber(from);
+  const recipient = canonicalPhoneNumber(to);
+  await prisma.recipientWarmth.upsert({
+    where: { fromLine_recipient: { fromLine, recipient } },
+    create: {
+      fromLine,
+      recipient,
+      consecutiveUnansweredOutbound: 0,
+      lastInboundAt,
+      ...(chatId ? { chatId } : {}),
+    },
+    update: {
+      consecutiveUnansweredOutbound: 0,
+      lastInboundAt,
+      ...(chatId ? { chatId } : {}),
+    },
+  });
 }
 
 export async function markPairWarm(

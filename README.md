@@ -51,6 +51,7 @@ That's it. One wallet balance, one discovery flow, native messaging protocols.
 - **Send messages** — iMessage first, then RCS, then SMS. Reactions, voice memos, media, attachments.
 - **Follow up in existing threads** — warm conversations cost less than cold outreach.
 - **Check before sending** — iMessage/RCS capability checks, warmth pre-checks, thread history.
+- **Respect reply limits** — block after 10 consecutive unanswered messages to the same recipient (line-wide).
 - **Manage their own sends** — edit, delete, or react to messages they paid for.
 
 Every agent shares one outbound line. Your wallet owns what you paid to send; the thread belongs to the conversation.
@@ -63,6 +64,7 @@ Pay per call, quoted before you commit.
 | --- | --- |
 | New recipient (cold) | $0.50 — text-only opener, 50/day cap |
 | Follow-up (warm) | $0.05–$1.25 surge pricing |
+| Unanswered limit | 10 consecutive outbound without a reply — then blocked until they respond |
 | Everything else | $0.02 flat |
 | Reads | Free with wallet auth |
 

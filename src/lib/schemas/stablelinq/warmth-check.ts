@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { e164PhoneSchema } from "@/lib/schemas/linq/common";
+import { MAX_CONSECUTIVE_UNANSWERED_OUTBOUND } from "@/lib/routing/_shared/constants";
 
 export const warmthCheckParamsSchema = z
   .object({
@@ -11,6 +12,8 @@ export const warmthCheckResultSchema = z.object({
   recipient: e164PhoneSchema,
   warmth: z.enum(["cold", "warm"]),
   chat_id: z.string().nullable(),
+  consecutive_unanswered_outbound: z.number().int().min(0),
+  send_blocked: z.boolean(),
 });
 
 export const warmthCheckResponseSchema = z.object({
@@ -20,3 +23,7 @@ export const warmthCheckResponseSchema = z.object({
 
 export type WarmthCheckParams = z.infer<typeof warmthCheckParamsSchema>;
 export type WarmthCheckResponse = z.infer<typeof warmthCheckResponseSchema>;
+
+export function isSendBlocked(consecutiveUnansweredOutbound: number): boolean {
+  return consecutiveUnansweredOutbound >= MAX_CONSECUTIVE_UNANSWERED_OUTBOUND;
+}

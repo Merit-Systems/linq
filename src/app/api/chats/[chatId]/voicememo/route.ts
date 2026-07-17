@@ -4,9 +4,12 @@ import { chatSendVoicememoResponseSchema } from "@/lib/schemas/linq/responses/ch
 import { handleChatsSendVoicememo } from "./_shared/handlers";
 import { quoteFollowUpMessagePrice } from "@/lib/routing/_shared/message-pricing";
 import { maxMessagePrice } from "@/lib/pricing";
+import { validateColdOutbound } from "@/lib/routing/_shared/first-message-validate";
+import { assertUnansweredOutboundAllowedForChat } from "@/lib/routing/_shared/unanswered-outbound-validate";
+import { pathParamFromRequest } from "@/lib/routing/_shared/path-params";
 import { router, paidOpts } from "@/lib/router";
 
-export const POST = router
+const postHandler = router
   .route("chats-send-voicememo")
   .path("chats/{chatId}/voicememo")
   .method("POST")
@@ -15,3 +18,10 @@ export const POST = router
   .output(chatSendVoicememoResponseSchema)
   .description("Linq Voice Memo — Send an iMessage voice memo to a chat.")
   .handler(handleChatsSendVoicememo);
+
+export async function POST(request: Request) {
+  const chatId = pathParamFromRequest(request, "chatId");
+  await validateColdOutbound("chats/send-voicememo", { request });
+  await assertUnansweredOutboundAllowedForChat(chatId);
+  return postHandler(request);
+}
