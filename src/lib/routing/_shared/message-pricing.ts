@@ -19,7 +19,6 @@ import {
 } from "@/lib/pricing";
 import {
   classifyRecipients,
-  validateColdOutbound,
 } from "./first-message-validate";
 
 const OUTBOUND_EXHAUSTED =
@@ -84,9 +83,7 @@ export async function reserveFollowUpMessageSlot(
 export async function quoteMessageSendPrice(
   slug: string,
   body: unknown,
-  request?: Request,
 ): Promise<string> {
-  await validateColdOutbound(slug, { body, request });
   const classified = await classifyRecipients(
     slug,
     (body ?? {}) as Record<string, unknown>,
@@ -129,7 +126,6 @@ export async function quoteMessageSendPrice(
 export async function reserveMessageSendSlots(
   slug: string,
   body: unknown,
-  request?: Request,
   wallet?: string | null,
 ): Promise<{
   classified: Awaited<ReturnType<typeof classifyRecipients>>;
@@ -137,13 +133,12 @@ export async function reserveMessageSendSlots(
   ledgerId: string;
   priceUsd: string;
 }> {
-  await validateColdOutbound(slug, { body, request });
   const classified = await classifyRecipients(
     slug,
     (body ?? {}) as Record<string, unknown>,
   );
 
-  const priceUsd = await quoteMessageSendPrice(slug, body, request);
+  const priceUsd = await quoteMessageSendPrice(slug, body);
 
   if (classified.cold.length > 0) {
     const outbound = await reserveOutboundFirstSlots(classified.cold.length);

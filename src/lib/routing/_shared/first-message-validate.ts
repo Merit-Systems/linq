@@ -10,21 +10,34 @@ const URL_IN_TEXT =
 const COLD_PAIR_MESSAGE =
   "First message to this recipient must be text-only (no links, media, or URLs). Send a plain text opener, then follow up.";
 
+export function coldOpenerViolationMessage(coldRecipients: string[]): string {
+  const handles = coldRecipients.join(", ");
+  return `New recipient(s) ${handles} (not yet contacted on this line) require a text-only opener — no links, media, or URLs. Send plain text first; use POST /api/chats/{chatId}/messages for media on follow-up.`;
+}
+
 export function textContainsUrl(text: string): boolean {
   return URL_IN_TEXT.test(text);
 }
 
-export function assertColdOutboundContentAllowed(parts: MessagePart[]): void {
+export function assertColdOutboundContentAllowed(
+  parts: MessagePart[],
+  coldRecipients?: string[],
+): void {
+  const message =
+    coldRecipients && coldRecipients.length > 0
+      ? coldOpenerViolationMessage(coldRecipients)
+      : COLD_PAIR_MESSAGE;
+
   for (const part of parts) {
     if (
       part.type === "link" ||
       part.type === "media" ||
       part.type === "imessage_app"
     ) {
-      throw Object.assign(new Error(COLD_PAIR_MESSAGE), { status: 422 });
+      throw Object.assign(new Error(message), { status: 422 });
     }
     if (part.type === "text" && textContainsUrl(part.value)) {
-      throw Object.assign(new Error(COLD_PAIR_MESSAGE), { status: 422 });
+      throw Object.assign(new Error(message), { status: 422 });
     }
   }
 }
@@ -82,7 +95,9 @@ export async function validateColdOutbound(
     if (!to?.length || !message?.parts) return;
 
     const { cold } = await classifyRecipients(slug, body);
-    if (cold.length > 0) assertColdOutboundContentAllowed(message.parts);
+    if (cold.length > 0) {
+      assertColdOutboundContentAllowed(message.parts, cold);
+    }
     return;
   }
 

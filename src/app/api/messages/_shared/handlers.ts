@@ -11,8 +11,8 @@ export async function handleMessagesCreate(ctx: {
   query?: unknown;
   wallet?: string | null;
 }) {
-  const { request, body, wallet } = ctx;
-  const { classified, priceUsd } = await reserveMessageSendSlots("messages/create", body, request, wallet ?? null);
+  const { body, wallet } = ctx;
+  const { classified, priceUsd } = await reserveMessageSendSlots("messages/create", body, wallet ?? null);
   try {
     const result = await linq.messages.create(injectFromLine(body as Record<string, unknown>) as never);
     await markColdRecipientsWarm(classified.cold);

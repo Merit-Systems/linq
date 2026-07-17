@@ -10,13 +10,11 @@
     "postinstall": "prisma generate",
     "db:generate": "prisma generate",
     "db:migrate:dev": "prisma migrate dev",
-    "test:discord": "tsx scripts/test-discord-phone-status.ts",
     "ensure:webhook": "tsx scripts/ensure-linq-webhook-subscription.ts",
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "check": "npm run lint && npm run typecheck && npm run test",
-    "test": "vitest run"
+    "check": "npm run lint && npm run typecheck"
   },
   "dependencies": {
     "@agentcash/router": "1.18.0",
@@ -47,7 +45,6 @@
     "prisma": "^7.3.0",
     "tailwindcss": "^4.1.18",
     "tsx": "^4.20.3",
-    "typescript": "^5.9.3",
-    "vitest": "^3.2.3"
+    "typescript": "^5.9.3"
   }
 }

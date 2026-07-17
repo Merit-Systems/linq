@@ -34,8 +34,6 @@ npx @agentcash/discovery localhost:3000
 |---------|-------------|
 | `npm run dev` | Next.js dev server |
 | `npm run build` | Migrations + production build |
-| `npm run test` | Vitest unit tests |
-| `npm run test:discord` | Post sample line-status alerts to `DISCORD_WEBHOOK_URL` |
 | `npm run ensure:webhook` | Idempotent Linq `phone_number.status_updated` subscription |
 
 See [stablelinq.dev/llms.txt](https://stablelinq.dev/llms.txt) for agent guidance and endpoint composition.
@@ -70,7 +68,6 @@ After deploy:
 
 ```bash
 npm run ensure:webhook
-npm run test:discord   # optional: verify Discord formatting locally
 ```
 
 ## Deploy (Vercel)

@@ -38,11 +38,11 @@ All endpoints support \`check_endpoint_schema\`. Use it on the selected endpoint
 
 ## Messaging happy path
 
-1. Optional: \`POST /api/capability/check-imessage\` ($0.02 flat) — \`{ "handles": ["+15551234567"] }\`
-2. \`POST /api/messages\` — send to recipient(s). Reuses an existing Linq chat when one exists. **No \`from\` field** — all agents share **+12052438809**. First contact to a **new** recipient must be plain text (no links/media/URLs).
-3. \`GET /api/account/sent-messages\` (SIWX) — list **your** sends; note \`chatId\` for follow-ups.
+1. Optional: \`POST /api/capability/check-imessage\` or \`check-rcs\` ($0.02 flat each) when channel matters.
+2. \`POST /api/messages\` — send to recipient(s). See **POST /api/messages** below for pricing, channel fallback, and cold/warm rules.
+3. \`GET /api/account/sent-messages\` (SIWX) — list **your** sends; note \`chat_id\` for follow-ups.
 4. \`GET /api/account/chats\` (SIWX) — chat summaries from **your** sends only.
-5. \`POST /api/chats/{chatId}/messages\` — follow-ups when you already have a \`chatId\` (warm surge pricing).
+5. \`POST /api/chats/{chatId}/messages\` — follow-ups when you already have a \`chat_id\` (warm surge pricing).
 
 Example send:
 
@@ -53,7 +53,40 @@ Example send:
 }
 \`\`\`
 
-Response includes \`chat_id\` — save it for step 5.
+Response includes \`chat_id\` and \`service\` — save \`chat_id\` for step 5.
+
+## POST /api/messages
+
+Primary send endpoint. Reuses an existing Linq chat when one exists. **No \`from\` field** — all agents share **+12052438809**.
+
+### Delivery channel
+
+StableLinq sends on **iMessage first**, falls back to **RCS**, then **SMS** (best available per recipient).
+
+- Optional override: \`message.preferred_service\` (\`iMessage\` | \`RCS\` | \`SMS\`)
+- After send, read top-level \`service\` and \`handles[].service\` in the 200 response
+- Optional pre-checks: \`POST /api/capability/check-imessage\`, \`POST /api/capability/check-rcs\` ($0.02 each)
+
+### Cold vs warm
+
+- **Cold** = recipient new to shared line \`+12052438809\` (line-wide warmth, not per wallet)
+- **Warm** = line has contacted this recipient before
+- Cold sends cost **more** than warm; exact amount from the **402 quote only** — do not compute manually
+- **Cold opener validation:** plain text only — enforced **pre-payment** (**422**, no charge). Media/links/URLs on a cold opener return 422 with a message naming the cold recipient(s) and how to fix it
+- **Mixed \`to[]\`:** cold fee per new recipient + warm surge component when applicable
+
+### Pricing
+
+- **Cold outbound-first:** $0.50/recipient, **50 new recipients/day** line-wide cap
+- **Warm surge:** $0.05–$1.25, **6,000 messages/day** line-wide cap
+- **Cold-only send** (all recipients new): cold fee only, no surge on top
+- **Cap exhaustion:** **503** + \`retryAfter\` (seconds until UTC midnight)
+- **Non-message paid calls:** $0.02 flat
+
+### Request / response
+
+- Body: \`{ to: string[], message: { parts: [...] } }\`
+- Response: \`chat_id\`, \`service\`, \`message.id\` (Linq message id)
 
 ## Sending line (shared)
 
@@ -90,19 +123,10 @@ Line configuration routes require SIWX from the **ops allowlisted wallet** (\`ST
 - \`PUT /api/internal/phone-numbers/{phoneNumberId}\`
 - \`GET /api/internal/available-number\`
 
-## Pricing
-
-Use the **402 quote only** — do not compute manually.
-
-- **Cold outbound-first:** $0.50 per new recipient, 50 new recipients/day global cap. First contact must be plain text (no links/media/URLs).
-- **Warm follow-up:** surge $0.05–$1.25, 6,000 messages/day global cap.
-- **Non-message paid calls:** $0.02 flat.
-- On pool exhaustion: **503** with \`retryAfter\` (seconds until UTC midnight).
-
 ## Key agent endpoints
 
-- \`POST /api/messages\` — send to recipient(s); **new to line $0.50/recipient** (text-only), **warm $0.05–$1.25** surge
-- \`POST /api/chats/{chatId}/messages\` — follow-up in existing chat (warm surge only)
+- \`POST /api/messages\` — send on iMessage → RCS → SMS; cold costs more than warm (see above)
+- \`POST /api/chats/{chatId}/messages\` — warm follow-up in existing chat
 - \`GET /api/account/sent-messages\` — your send history (SIWX)
 - \`GET /api/account/chats\` — your chats (SIWX)
 - \`POST /api/attachments\` — optional pre-upload for >10MB, reuse, or latency ($0.02)
@@ -111,7 +135,7 @@ Use the **402 quote only** — do not compute manually.
 
 Send images, videos, documents, and audio as \`media\` parts in \`message.parts[]\`. \`parts[]\` items are discriminated by \`type\`: \`text\`, \`media\`, \`link\`, \`imessage_app\`.
 
-**Cold-start rule:** first contact to a **new** recipient must be plain text only — no media, links, or URLs. Send media on warm follow-ups via \`POST /api/chats/{chatId}/messages\`.
+**Cold-start rule:** first contact to a **new** recipient must be plain text only — no media, links, or URLs. Violations return **422 before payment**. Send media on warm follow-ups via \`POST /api/chats/{chatId}/messages\`.
 
 ### Send via URL (default, ≤10MB)
 
