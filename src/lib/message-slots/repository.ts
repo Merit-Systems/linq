@@ -125,6 +125,16 @@ export async function resetUnansweredOutbound(
   chatId?: string,
   lastInboundAt: Date = new Date(),
 ): Promise<void> {
+  await syncUnansweredOutboundCount(from, to, 0, chatId, lastInboundAt);
+}
+
+export async function syncUnansweredOutboundCount(
+  from: string,
+  to: string,
+  count: number,
+  chatId?: string,
+  lastInboundAt?: Date,
+): Promise<void> {
   const fromLine = canonicalPhoneNumber(from);
   const recipient = canonicalPhoneNumber(to);
   await prisma.recipientWarmth.upsert({
@@ -132,13 +142,13 @@ export async function resetUnansweredOutbound(
     create: {
       fromLine,
       recipient,
-      consecutiveUnansweredOutbound: 0,
-      lastInboundAt,
+      consecutiveUnansweredOutbound: count,
+      ...(count === 0 && lastInboundAt ? { lastInboundAt } : {}),
       ...(chatId ? { chatId } : {}),
     },
     update: {
-      consecutiveUnansweredOutbound: 0,
-      lastInboundAt,
+      consecutiveUnansweredOutbound: count,
+      ...(count === 0 && lastInboundAt ? { lastInboundAt } : {}),
       ...(chatId ? { chatId } : {}),
     },
   });

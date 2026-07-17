@@ -1,6 +1,7 @@
 import { linq } from "@/lib/linq/client";
 import {
   getUnansweredOutboundCount,
+  lookupRecipientWarmth,
 } from "@/lib/message-slots/repository";
 import { classifyRecipients } from "./first-message-validate";
 import {
@@ -8,6 +9,10 @@ import {
   MAX_CONSECUTIVE_UNANSWERED_OUTBOUND,
 } from "./constants";
 import { canonicalPhoneNumber } from "./phone-number";
+import {
+  reconcileUnansweredOutbound,
+  shouldReconcileUnansweredOutbound,
+} from "./unanswered-outbound-reconcile";
 
 export function unansweredOutboundBlockedMessage(recipient: string): string {
   return `Recipient ${recipient} has not replied after ${MAX_CONSECUTIVE_UNANSWERED_OUTBOUND} consecutive messages from this line. Wait for a reply before sending again.`;
@@ -22,9 +27,21 @@ function throwIfBlocked(recipient: string, count: number): void {
   }
 }
 
-async function assertRecipientAllowed(recipient: string): Promise<void> {
+async function assertRecipientAllowed(
+  recipient: string,
+  chatId?: string | null,
+): Promise<void> {
   const canonical = canonicalPhoneNumber(recipient);
-  const count = await getUnansweredOutboundCount(ASSIGNED_FROM_LINE, canonical);
+  let count = await getUnansweredOutboundCount(ASSIGNED_FROM_LINE, canonical);
+
+  if (shouldReconcileUnansweredOutbound(count)) {
+    count = await reconcileUnansweredOutbound({
+      recipient: canonical,
+      chatId,
+      postgresCount: count,
+    });
+  }
+
   throwIfBlocked(canonical, count);
 }
 
@@ -39,7 +56,9 @@ export async function assertUnansweredOutboundAllowedForChat(
   chatId: string,
 ): Promise<void> {
   const recipients = await getChatRecipients(chatId);
-  await Promise.all(recipients.map((recipient) => assertRecipientAllowed(recipient)));
+  await Promise.all(
+    recipients.map((recipient) => assertRecipientAllowed(recipient, chatId)),
+  );
 }
 
 export async function assertUnansweredOutboundAllowed(input: {
@@ -55,5 +74,13 @@ export async function assertUnansweredOutboundAllowed(input: {
   if (!to?.length) return;
 
   const { warm } = await classifyRecipients(input.slug, record);
-  await Promise.all(warm.map((recipient) => assertRecipientAllowed(recipient)));
+  const warmByRecipient = await lookupRecipientWarmth(warm);
+
+  await Promise.all(
+    warm.map((recipient) => {
+      const canonical = canonicalPhoneNumber(recipient);
+      const chatId = warmByRecipient.get(canonical)?.chatId ?? null;
+      return assertRecipientAllowed(recipient, chatId);
+    }),
+  );
 }
