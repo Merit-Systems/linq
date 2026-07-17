@@ -5,6 +5,7 @@ import { messageCreateResponseSchema } from "@/lib/schemas/linq/responses/messag
 import {
   quoteMessageSendPrice,
   maxMessageSendPrice,
+  buildMessagesCheckoutSession,
 } from "@/lib/routing/_shared/message-pricing";
 import { validateColdOutbound } from "@/lib/routing/_shared/first-message-validate";
 import { assertUnansweredOutboundAllowed } from "@/lib/routing/_shared/unanswered-outbound-validate";
@@ -17,6 +18,8 @@ export const POST = router
   .paid((body) => quoteMessageSendPrice("messages/create", body), {
     ...paidOpts(),
     maxPrice: maxMessageSendPrice(),
+    checkoutSession: ({ body, price }) =>
+      buildMessagesCheckoutSession({ body, price }),
   })
   .body(messageCreateParamsSchema)
   .validate(async (body) => {
@@ -25,6 +28,6 @@ export const POST = router
   })
   .output(messageCreateResponseSchema)
   .description(
-    "Linq Messages — Send on iMessage, fallback to RCS then SMS. Reuses existing chats. New recipients (cold) cost more than warm; cold openers must be text-only. Exact price from the 402 quote. See discovery guidance for pricing, media, and overrides.",
+    "Linq Messages — Send on iMessage, fallback to RCS then SMS. Reuses existing chats. Required: call POST /api/messages/warmth before stating cold/warm to the user. Quote send cost only from the 402 (checkout_session.quoted_price_usd); maxPrice is an authorization ceiling, not the send cost. Cold openers must be text-only. See discovery guidance for pricing, media, and overrides.",
   )
   .handler(handleMessagesCreate);

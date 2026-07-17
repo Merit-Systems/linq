@@ -14,6 +14,6 @@ export const POST = router
   .body(warmthCheckParamsSchema)
   .output(warmthCheckResponseSchema)
   .description(
-    "Messages Warmth — Check cold/warm status, consecutive unanswered outbound count, and send_blocked for recipients before POST /messages. Requires SIWX wallet auth — free, no payment.",
+    "Messages Warmth — Required first step before POST /messages or before telling the user cold/warm or send cost. Returns cold/warm status, consecutive unanswered outbound count, and send_blocked per recipient. Requires SIWX wallet auth — free, no payment.",
   )
   .handler(handleMessagesWarmthCheck);

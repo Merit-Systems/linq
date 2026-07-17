@@ -185,3 +185,26 @@ export async function markColdRecipientsWarm(
   const { ASSIGNED_FROM_LINE } = await import("./constants");
   await markPairWarmMulti(ASSIGNED_FROM_LINE, cold, chatId);
 }
+
+export async function buildMessagesCheckoutSession(input: {
+  body: unknown;
+  price: string;
+}): Promise<Record<string, unknown>> {
+  const classified = await classifyRecipients(
+    "messages/create",
+    (input.body ?? {}) as Record<string, unknown>,
+  );
+
+  return {
+    quoted_price_usd: input.price,
+    max_authorization_ceiling_usd: maxMessageSendPrice(),
+    pricing_note:
+      "quoted_price_usd is what you pay. max_authorization_ceiling_usd is the x402 wallet cap for worst-case batch sends — not this request's cost.",
+    recipients: {
+      cold: classified.cold,
+      warm: classified.warm,
+    },
+    warmth_precheck:
+      "Call POST /api/messages/warmth before telling the user cold/warm.",
+  };
+}
