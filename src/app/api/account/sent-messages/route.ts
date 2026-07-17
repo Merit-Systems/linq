@@ -14,6 +14,6 @@ export const GET = router
   .query(sentMessagesListParamsSchema)
   .output(sentMessagesListResponseSchema)
   .description(
-    "[StableLinq DB] List messages you paid to send via StableLinq, newest first. Scoped to your SIWX wallet only.",
+    "List messages you paid to send via StableLinq, newest first. Requires SIWX wallet auth — scoped to your wallet only.",
   )
   .handler(handleAccountSentMessagesList);

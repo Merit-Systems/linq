@@ -86,6 +86,10 @@ All send prices come from the **402 quote** — do not compute manually.
 - **Cold-only** (all recipients new): \`max($0.50 × recipients, surge slot price)\` — never cheaper than warm at the same slot
 - **Warm-only** (all recipients warm, or follow-up in existing chat): surge slot price only
 - **Mixed \`to[]\`:** \`($0.50 × cold recipients) + surge slot price\`
+- **Per-request bounds (defaults, before 402 quote):**
+  - \`POST /api/messages\`: **$0.05–$26.25** — worst case is mixed send with 50 cold recipients + max surge (\`50 × $0.50 + $1.25\`)
+  - Cold-only same request: up to **$25.00** (\`max(50 × $0.50, surge)\`)
+  - \`POST /api/chats/{chatId}/messages\` and \`/voicememo\`: **$0.05–$1.25** (surge only)
 - **Cap exhaustion:** **503** + \`retryAfter\` (seconds until UTC midnight)
 - **Non-message paid calls:** $0.02 flat (capability checks, attachment upload/delete, message edit/delete/react)
 

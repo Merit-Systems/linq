@@ -7,10 +7,10 @@ import { router, paidOpts } from "@/lib/router";
 
 export const POST = router
   .route("messages-add-reaction")
-  .path("messages/:messageId/reactions")
+  .path("messages/{messageId}/reactions")
   .method("POST")
   .paid(FLAT_PRICE_USD_STRING, { ...paidOpts(), maxPrice: FLAT_PRICE_USD_STRING })
   .body(messageAddReactionParamsSchema)
   .output(messageAddReactionResponseSchema)
-  .description("Add a reaction to a message.")
+  .description("Linq Messages — Add a reaction to a message.")
   .handler(handleMessagesAddReaction);

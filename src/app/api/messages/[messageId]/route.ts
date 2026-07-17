@@ -8,19 +8,19 @@ import { router, paidOpts } from "@/lib/router";
 
 export const DELETE = router
   .route("messages-delete")
-  .path("messages/:messageId")
+  .path("messages/{messageId}")
   .method("DELETE")
   .paid(FLAT_PRICE_USD_STRING, { ...paidOpts(), maxPrice: FLAT_PRICE_USD_STRING })
   .output(emptyObjectSchema)
-  .description("Delete a message.")
+  .description("Linq Messages — Delete a message.")
   .handler(handleMessagesDelete);
 
 export const PATCH = router
   .route("messages-update")
-  .path("messages/:messageId")
+  .path("messages/{messageId}")
   .method("PATCH")
   .paid(FLAT_PRICE_USD_STRING, { ...paidOpts(), maxPrice: FLAT_PRICE_USD_STRING })
   .body(messageUpdateParamsSchema)
   .output(messageSchema)
-  .description("Edit a message.")
+  .description("Linq Messages — Edit a message.")
   .handler(handleMessagesUpdate);

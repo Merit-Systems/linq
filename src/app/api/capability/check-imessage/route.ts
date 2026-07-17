@@ -12,5 +12,5 @@ export const POST = router
   .paid(FLAT_PRICE_USD_STRING, { ...paidOpts(), maxPrice: FLAT_PRICE_USD_STRING })
   .body(capabilityCheckIMessageParamsSchema)
   .output(handleCheckResponseSchema)
-  .description("Check whether handles support iMessage.")
+  .description("Linq Capability — Check whether handles support iMessage.")
   .handler(handleCapabilityCheckImessage);

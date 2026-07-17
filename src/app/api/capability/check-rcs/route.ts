@@ -12,5 +12,5 @@ export const POST = router
   .paid(FLAT_PRICE_USD_STRING, { ...paidOpts(), maxPrice: FLAT_PRICE_USD_STRING })
   .body(capabilityCheckRCSParamsSchema)
   .output(handleCheckResponseSchema)
-  .description("Check whether handles support RCS.")
+  .description("Linq Capability — Check whether handles support RCS.")
   .handler(handleCapabilityCheckRcs);

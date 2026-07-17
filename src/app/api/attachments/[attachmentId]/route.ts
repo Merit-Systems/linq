@@ -6,9 +6,9 @@ import { router, paidOpts } from "@/lib/router";
 
 export const DELETE = router
   .route("attachments-delete")
-  .path("attachments/:attachmentId")
+  .path("attachments/{attachmentId}")
   .method("DELETE")
   .paid(FLAT_PRICE_USD_STRING, { ...paidOpts(), maxPrice: FLAT_PRICE_USD_STRING })
   .output(emptyObjectSchema)
-  .description("Delete an unused pre-uploaded attachment.")
+  .description("Linq Attachments — Delete an unused pre-uploaded attachment.")
   .handler(handleAttachmentsDelete);

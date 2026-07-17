@@ -7,10 +7,10 @@ import { router, paidOpts } from "@/lib/router";
 
 export const POST = router
   .route("messages-update-app-card")
-  .path("messages/:messageId/update")
+  .path("messages/{messageId}/update")
   .method("POST")
   .paid(FLAT_PRICE_USD_STRING, { ...paidOpts(), maxPrice: FLAT_PRICE_USD_STRING })
   .body(messageUpdateAppCardParamsSchema)
   .output(messageUpdateAppCardResponseSchema)
-  .description("Update an iMessage app card.")
+  .description("Linq iMessage App — Update an iMessage app card.")
   .handler(handleMessagesUpdateAppCard);

@@ -22,6 +22,8 @@ npm run db:migrate:dev   # first time: apply RecipientWarmth migration
 npm run dev
 ```
 
+Parameterized routes: use OpenAPI `{param}` syntax in `.path()` (e.g. `chats/{chatId}/messages`), not `:param` — AgentCash `check_endpoint_schema` matches concrete UUIDs to brace templates only.
+
 Discovery locally:
 
 ```bash
@@ -42,6 +44,7 @@ See [stablelinq.dev/llms.txt](https://stablelinq.dev/llms.txt) for agent guidanc
 
 - **Cold outbound-first** (new recipient): **$0.50/recipient**, **50 new recipients/day** global cap — text-only opener required; cold-only sends pay `max($0.50/recipient, surge slot price)` so they are never cheaper than warm at the same slot
 - **Warm follow-ups** (existing chat or warm pair): surge **$0.05–$1.25**, **6000/day** UTC cap
+- **Per-request bounds:** `POST /api/messages` up to **$26.25** (mixed: 50 cold × $0.50 + max surge); cold-only same request up to **$25.00**; follow-ups/voicememo **$0.05–$1.25**
 - **All other paid endpoints**: **$0.02** flat
 - **Reads**: free with SIWX — ledger via `GET /api/account/sent-messages` and `GET /api/account/chats` (wallet-scoped); thread history via `GET /api/account/chats/{chatId}/messages` (line-known chats)
 

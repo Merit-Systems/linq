@@ -14,6 +14,6 @@ export const GET = router
   .query(accountChatsListParamsSchema)
   .output(accountChatsListResponseSchema)
   .description(
-    "[StableLinq DB] List chats you have sent messages in (derived from your paid sends). Scoped to your SIWX wallet only.",
+    "List chats you have sent messages in (derived from your paid sends). Requires SIWX wallet auth — scoped to your wallet only.",
   )
   .handler(handleAccountChatsList);

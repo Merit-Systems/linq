@@ -12,5 +12,5 @@ export const POST = router
   .paid(FLAT_PRICE_USD_STRING, { ...paidOpts(), maxPrice: FLAT_PRICE_USD_STRING })
   .body(attachmentCreateParamsSchema)
   .output(attachmentCreateResponseSchema)
-  .description("Optional media pre-upload for files >10MB (up to 100MB) or reuse across sends. POST metadata → attachment_id + presigned upload_url; PUT bytes, then reference attachment_id in message.parts. For ≤10MB, use a public HTTPS url in parts instead.")
+  .description("Linq Attachments — Optional media pre-upload for files >10MB (up to 100MB) or reuse across sends. POST metadata → attachment_id + presigned upload_url; PUT bytes, then reference attachment_id in message.parts. For ≤10MB, use a public HTTPS url in parts instead.")
   .handler(handleAttachmentsCreate);
