@@ -80,10 +80,21 @@ export async function reserveFollowUpMessageSlot(
   return { messageSlot: slotNumber, ledgerId, priceUsd };
 }
 
-export async function quoteMessageSendPrice(
+export type MessageSendQuote = {
+  quoted_price_usd: string;
+  pricing_breakdown: {
+    cold_recipients: number;
+    warm_recipients: number;
+    cold_first_usd: string;
+    surge_slot_usd: string;
+    surge_slot_number: number;
+  };
+};
+
+export async function quoteMessageSendBreakdown(
   slug: string,
   body: unknown,
-): Promise<string> {
+): Promise<MessageSendQuote> {
   const classified = await classifyRecipients(
     slug,
     (body ?? {}) as Record<string, unknown>,
@@ -123,7 +134,24 @@ export async function quoteMessageSendPrice(
     ? Math.max(coldTotal, surge)
     : coldTotal + surge;
 
-  return formatUsd(total);
+  return {
+    quoted_price_usd: formatUsd(total),
+    pricing_breakdown: {
+      cold_recipients: classified.cold.length,
+      warm_recipients: classified.warm.length,
+      cold_first_usd: formatUsd(coldTotal),
+      surge_slot_usd: surgePrice,
+      surge_slot_number: slotNumber,
+    },
+  };
+}
+
+export async function quoteMessageSendPrice(
+  slug: string,
+  body: unknown,
+): Promise<string> {
+  const quote = await quoteMessageSendBreakdown(slug, body);
+  return quote.quoted_price_usd;
 }
 
 export async function reserveMessageSendSlots(
@@ -205,6 +233,6 @@ export async function buildMessagesCheckoutSession(input: {
       warm: classified.warm,
     },
     warmth_precheck:
-      "Call POST /api/messages/warmth before telling the user cold/warm.",
+      "POST /api/messages/warmth returns quoted_price_usd for this to[] before send.",
   };
 }
