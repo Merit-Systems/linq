@@ -7,6 +7,7 @@ import { maxMessagePrice } from "@/lib/pricing";
 import { validateColdOutbound } from "@/lib/routing/_shared/first-message-validate";
 import { assertUnansweredOutboundAllowedForChat } from "@/lib/routing/_shared/unanswered-outbound-validate";
 import { pathParamFromRequest } from "@/lib/routing/_shared/path-params";
+import { withRouteGuard } from "@/lib/routing/_shared/route-guard";
 import { router, paidOpts } from "@/lib/router";
 
 const postHandler = router
@@ -20,8 +21,10 @@ const postHandler = router
   .handler(handleChatsSendVoicememo);
 
 export async function POST(request: Request) {
-  const chatId = pathParamFromRequest(request, "chatId");
-  await validateColdOutbound("chats/send-voicememo", { request });
-  await assertUnansweredOutboundAllowedForChat(chatId);
-  return postHandler(request);
+  return withRouteGuard(async () => {
+    const chatId = pathParamFromRequest(request, "chatId");
+    await validateColdOutbound("chats/send-voicememo", { request });
+    await assertUnansweredOutboundAllowedForChat(chatId);
+    return postHandler(request);
+  });
 }

@@ -6,6 +6,7 @@ import { quoteFollowUpMessagePrice } from "@/lib/routing/_shared/message-pricing
 import { maxMessagePrice } from "@/lib/pricing";
 import { pathParamFromRequest } from "@/lib/routing/_shared/path-params";
 import { assertUnansweredOutboundAllowedForChat } from "@/lib/routing/_shared/unanswered-outbound-validate";
+import { withRouteGuard } from "@/lib/routing/_shared/route-guard";
 import { router, paidOpts } from "@/lib/router";
 
 const postHandler = router
@@ -19,7 +20,9 @@ const postHandler = router
   .handler(handleChatsMessagesSend);
 
 export async function POST(request: Request) {
-  const chatId = pathParamFromRequest(request, "chatId");
-  await assertUnansweredOutboundAllowedForChat(chatId);
-  return postHandler(request);
+  return withRouteGuard(async () => {
+    const chatId = pathParamFromRequest(request, "chatId");
+    await assertUnansweredOutboundAllowedForChat(chatId);
+    return postHandler(request);
+  });
 }
