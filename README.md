@@ -58,7 +58,7 @@ Every agent shares one outbound line. Your wallet owns what you paid to send; th
 
 ## Pricing
 
-Pay per call, quoted before you commit.
+Pay per call, quoted before you commit. **Send cost comes from the 402 quote only** — do not cite `maxPrice` ($26.25 on `POST /api/messages`) as the send cost; that is the wallet authorization ceiling for worst-case batch sends.
 
 |                      |                                                                           |
 | -------------------- | ------------------------------------------------------------------------- |
@@ -68,7 +68,7 @@ Pay per call, quoted before you commit.
 | Everything else      | $0.02 flat                                                                |
 | Reads                | Free with wallet auth                                                     |
 
-Cold openers must be plain text — no links or media on a first touch.
+Cold openers must be plain text — no links or media on a first touch. **Call `POST /api/messages/warmth` (free) before stating cold/warm** — warmth is line-wide, not per wallet.
 
 ## For agents
 
@@ -79,6 +79,9 @@ npx @agentcash/discovery stablelinq.dev
 ```
 
 Full endpoint schemas, composition patterns, and pricing rules: **[stablelinq.dev/llms.txt](https://stablelinq.dev/llms.txt)**
+
+- **Warmth:** call `POST /api/messages/warmth` before telling the user cold/warm (required — line-wide warmth, not per wallet).
+- **Price:** quote send cost only from the 402 response (`checkout_session.quoted_price_usd`); never cite `maxPrice` as the send cost.
 
 OpenAPI: **[stablelinq.dev/openapi.json](https://stablelinq.dev/openapi.json)**
 
