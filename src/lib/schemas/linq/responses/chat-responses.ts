@@ -1,7 +1,6 @@
 import type LinqAPIV3 from "@linqapp/sdk";
 import { z } from "zod";
 import { isoDateTimeSchema } from "../common";
-import { statusTraceResponseSchema } from "../common";
 import {
   chatHealthStatusSchema,
   deliveryStatusSchema,
@@ -20,21 +19,6 @@ export const chatHealthStatusObjectSchema = z
   })
   .strict();
 
-export const chatSchema = z
-  .object({
-    id: z.string(),
-    created_at: isoDateTimeSchema,
-    display_name: z.string().nullable(),
-    handles: z.array(chatHandleSchema),
-    health_status: chatHealthStatusObjectSchema,
-    is_archived: z.boolean(),
-    is_group: z.boolean(),
-    updated_at: isoDateTimeSchema,
-    group_chat_icon: z.string().nullish(),
-    service: serviceTypeSchema.nullish(),
-  })
-  .strict() satisfies z.ZodType<LinqAPIV3.Chat>;
-
 export const sentMessageSchema = z
   .object({
     id: z.string(),
@@ -51,34 +35,6 @@ export const sentMessageSchema = z
     service: serviceTypeSchema.nullish(),
   })
   .strict();
-
-export const chatCreateResponseInnerSchema = z
-  .object({
-    id: z.string(),
-    display_name: z.string().nullable(),
-    handles: z.array(chatHandleSchema),
-    health_status: chatHealthStatusObjectSchema,
-    is_group: z.boolean(),
-    message: sentMessageSchema,
-    service: serviceTypeSchema,
-  })
-  .strict();
-
-export const chatCreateResponseSchema = z
-  .object({
-    chat: chatCreateResponseInnerSchema,
-  })
-  .strict() satisfies z.ZodType<LinqAPIV3.ChatCreateResponse>;
-
-export const chatUpdateResponseSchema = z
-  .object({
-    chat_id: z.string().optional(),
-    status: z.string().optional(),
-  })
-  .strict() satisfies z.ZodType<LinqAPIV3.ChatUpdateResponse>;
-
-export const chatLeaveChatResponseSchema =
-  statusTraceResponseSchema satisfies z.ZodType<LinqAPIV3.ChatLeaveChatResponse>;
 
 export const chatSendVoicememoResponseSchema = z
   .object({
@@ -115,5 +71,4 @@ export const messageSendResponseSchema = z
   })
   .strict();
 
-export type Chat = z.infer<typeof chatSchema>;
 export type SentMessage = z.infer<typeof sentMessageSchema>;

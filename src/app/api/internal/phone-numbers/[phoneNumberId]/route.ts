@@ -6,7 +6,7 @@ import { router } from "@/lib/router";
 
 export const PUT = router
   .route("phone-numbers-update")
-  .path("phone-numbers/:phoneNumberId")
+  .path("internal/phone-numbers/:phoneNumberId")
   .method("PUT")
   .siwx()
   .body(phoneNumberUpdateParamsSchema)

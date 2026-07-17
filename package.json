@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "next dev",
-    "build": "npm run deploy-migrations && npm run audit:schemas && next build",
+    "build": "npm run deploy-migrations && next build",
     "deploy-migrations": "node scripts/migrate-deploy.mjs",
     "postinstall": "prisma generate",
     "db:generate": "prisma generate",
@@ -16,13 +16,11 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "check": "npm run lint && npm run typecheck && npm run test",
-    "test": "vitest run",
-    "audit:schemas": "tsx scripts/audit-sdk-coverage.ts"
+    "test": "vitest run"
   },
   "dependencies": {
     "@agentcash/router": "1.18.0",
     "@agentcash/telemetry": "0.5.4",
-    "@coinbase/x402": "^2.1.0",
     "@linqapp/sdk": "0.28.2",
     "@neondatabase/serverless": "^1.1.0",
     "@prisma/adapter-neon": "^7.3.0",
@@ -30,26 +28,17 @@
     "@prisma/client": "^7.3.0",
     "@t3-oss/env-nextjs": "0.13.10",
     "@upstash/redis": "^1.36.2",
-    "@x402/core": "2.17.0",
-    "@x402/evm": "2.17.0",
-    "@x402/extensions": "2.17.0",
-    "@x402/next": "2.17.0",
     "dotenv": "^17.4.2",
-    "mppx": "^0.8.5",
     "next": "16.2.6",
-    "pg": "^8.22.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "viem": "2.54.6",
-    "zod": "^4.0.0",
-    "zod-openapi": "^5.0.0"
+    "zod": "^4.0.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.1",
     "@prisma/client-runtime-utils": "^7.3.0",
     "@tailwindcss/postcss": "^4.1.18",
     "@types/node": "^22.0.0",
-    "@types/pg": "^8.20.0",
     "@types/react": "^19.2.8",
     "@types/react-dom": "^19.2.3",
     "eslint": "^9.39.2",

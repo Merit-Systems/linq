@@ -6,7 +6,7 @@ import { router } from "@/lib/router";
 
 export const GET = router
   .route("available-number-retrieve")
-  .path("available-number")
+  .path("internal/available-number")
   .method("GET")
   .siwx()
   .query(availableNumberRetrieveParamsSchema)

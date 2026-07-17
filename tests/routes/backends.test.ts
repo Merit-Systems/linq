@@ -44,7 +44,7 @@ describe("route backends", () => {
   });
 
   it("tags ops routes with stablelinq-ops backend", () => {
-    expect(STABLELINQ_OPS_ROUTES.length).toBe(7);
+    expect(STABLELINQ_OPS_ROUTES.length).toBe(4);
     for (const route of STABLELINQ_OPS_ROUTES) {
       expect(route.backend).toBe("stablelinq-ops");
     }
@@ -94,16 +94,10 @@ describe("SIWX Linq reads removed from agent API", () => {
 
   it("ops registry routes use siwx not paid", () => {
     const contactCard = readFileSync(
-      join(ROOT, "src/app/api/contact-card/route.ts"),
+      join(ROOT, "src/app/api/internal/contact-card/route.ts"),
       "utf8",
     );
     expect(contactCard).toContain(".siwx()");
     expect(contactCard).not.toContain(".paid(");
-
-    const webhooks = readFileSync(
-      join(ROOT, "src/app/api/webhook-subscriptions/route.ts"),
-      "utf8",
-    );
-    expect(webhooks).toContain(".siwx()");
   });
 });

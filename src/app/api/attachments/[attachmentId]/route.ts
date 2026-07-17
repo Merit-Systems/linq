@@ -10,5 +10,5 @@ export const DELETE = router
   .method("DELETE")
   .paid(FLAT_PRICE_USD_STRING, { ...paidOpts(), maxPrice: FLAT_PRICE_USD_STRING })
   .output(emptyObjectSchema)
-  .description("Delete an attachment.")
+  .description("Delete an unused pre-uploaded attachment.")
   .handler(handleAttachmentsDelete);

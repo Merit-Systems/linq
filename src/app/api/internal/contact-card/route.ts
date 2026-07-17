@@ -7,7 +7,7 @@ import { setContactCardSchema } from "@/lib/schemas/linq/responses/contact-card-
 
 export const POST = router
   .route("contact-card-create")
-  .path("contact-card")
+  .path("internal/contact-card")
   .method("POST")
   .siwx()
   .body(contactCardCreateParamsSchema)
@@ -17,7 +17,7 @@ export const POST = router
 
 export const PATCH = router
   .route("contact-card-update")
-  .path("contact-card")
+  .path("internal/contact-card")
   .method("PATCH")
   .siwx()
   .body(contactCardUpdateParamsSchema)

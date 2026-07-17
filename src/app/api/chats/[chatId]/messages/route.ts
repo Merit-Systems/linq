@@ -12,5 +12,5 @@ export const POST = router
   .paid(() => quoteFollowUpMessagePrice(), { ...paidOpts(), maxPrice: maxMessageSendPrice() })
   .body(messageSendParamsSchema)
   .output(messageSendResponseSchema)
-  .description("Send a message to an existing chat.")
+  .description("Send a message to an existing chat. Media parts: { type: \"media\", url: \"https://...\" } (public HTTPS, ≤10MB) or { type: \"media\", attachment_id: \"...\" } after optional pre-upload via POST /api/attachments (>10MB up to 100MB, reuse across recipients, or lower latency).")
   .handler(handleChatsMessagesSend);

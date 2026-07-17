@@ -21,7 +21,7 @@ StableLinq proxies **Linq Partner API v3** for **writes** (\`https://api.linqapp
 - **Delete / edit / react:** only on **your** messages (\`linqMessageId\` you paid to send).
 - **Warmth + daily caps:** **line-wide** — cold/warm is per \`(fromLine, recipient)\`; 50 cold / 6k surge caps are shared across all agents.
 - **Recipients:** multiple agents may text the same recipient (one thread on their phone).
-- **Line config** (contact card, webhooks, phone settings): **not for agents** — ops wallet SIWX only (see below).
+- **Line config** (contact card, phone settings): **not for agents** — ops wallet SIWX only (see below).
 
 ## Agent Workflow (Progressive)
 
@@ -86,10 +86,9 @@ Requires SIWX/payment wallet + a \`SentMessage\` row for that \`linqMessageId\`:
 
 Line configuration routes require SIWX from the **ops allowlisted wallet** (\`STABLELINQ_OPS_WALLET\`, default \`0x2b38…aB7d\`). Other wallets get **403**.
 
-- \`POST\` / \`PATCH /api/contact-card\`
-- \`PUT /api/phone-numbers/{phoneNumberId}\`
-- \`GET /api/available-number\`
-- \`POST\` / \`PUT\` / \`DELETE /api/webhook-subscriptions\` (+ subscription id routes)
+- \`POST\` / \`PATCH /api/internal/contact-card\`
+- \`PUT /api/internal/phone-numbers/{phoneNumberId}\`
+- \`GET /api/internal/available-number\`
 
 ## Pricing
 
@@ -102,13 +101,48 @@ Use the **402 quote only** — do not compute manually.
 
 ## Key agent endpoints
 
-- \`POST /api/messages\` — send to recipient(s); cold start or warm (outbound-first + surge pricing)
+- \`POST /api/messages\` — send to recipient(s); **new to line $0.50/recipient** (text-only), **warm $0.05–$1.25** surge
 - \`POST /api/chats/{chatId}/messages\` — follow-up in existing chat (warm surge only)
 - \`GET /api/account/sent-messages\` — your send history (SIWX)
 - \`GET /api/account/chats\` — your chats (SIWX)
-- \`POST /api/attachments\` — upload attachment metadata before media parts ($0.02)
+- \`POST /api/attachments\` — optional pre-upload for >10MB, reuse, or latency ($0.02)
 
-## Message parts
+## Attachments / media
 
-\`parts[]\` items are discriminated by \`type\`: \`text\`, \`media\`, \`link\`, \`imessage_app\`. Use \`POST /api/attachments\` to obtain \`attachment_id\` before media parts.
+Send images, videos, documents, and audio as \`media\` parts in \`message.parts[]\`. \`parts[]\` items are discriminated by \`type\`: \`text\`, \`media\`, \`link\`, \`imessage_app\`.
+
+**Cold-start rule:** first contact to a **new** recipient must be plain text only — no media, links, or URLs. Send media on warm follow-ups via \`POST /api/chats/{chatId}/messages\`.
+
+### Send via URL (default, ≤10MB)
+
+Provide a publicly accessible HTTPS URL with a supported media type. No pre-upload step required.
+
+\`\`\`json
+{
+  "message": {
+    "parts": [
+      { "type": "text", "value": "Here's the photo" },
+      { "type": "media", "url": "https://your-cdn.com/images/photo.jpg" }
+    ]
+  }
+}
+\`\`\`
+
+Maximum file size via URL: **10MB**.
+
+### Pre-upload (optional)
+
+Use \`POST /api/attachments\` when you need to:
+
+- Send files **larger than 10MB** (up to **100MB**)
+- Send the **same file to many recipients** — upload once, reuse \`attachment_id\` without re-downloading each time
+- **Reduce send latency** — file is already stored before the message send
+
+How it works:
+
+1. \`POST /api/attachments\` with \`{ content_type, filename, size_bytes }\` → returns \`attachment_id\`, \`upload_url\` (valid 15 minutes), and \`required_headers\`
+2. \`PUT\` raw file bytes to \`upload_url\` with the required headers (no JSON or multipart)
+3. Send with \`{ "type": "media", "attachment_id": "<attachment_id>" }\` in message parts
+
+\`DELETE /api/attachments/{attachmentId}\` removes an unused pre-uploaded attachment.
 `;

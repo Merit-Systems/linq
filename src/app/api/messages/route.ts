@@ -12,5 +12,5 @@ export const POST = router
   .paid((body) => quoteMessageSendPrice("messages/create", body), { ...paidOpts(), maxPrice: maxMessageSendPrice() })
   .body(messageCreateParamsSchema)
   .output(messageCreateResponseSchema)
-  .description("Send a message to one or more recipients (cold start or warm). Reuses an existing chat when possible. First contact to a new recipient must be text-only (no links/media/URLs). Outbound-first pricing applies per new recipient (50/day cap).")
+  .description("Send to recipient(s); reuses chats. New to line: $0.50/recipient, text-only opener (50/day). Warm: $0.05–$1.25 surge (6k/day). Mixed to[] bills cold + surge. Warm sends may include media (url ≤10MB or attachment_id).")
   .handler(handleMessagesCreate);

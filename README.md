@@ -33,9 +33,8 @@ npx @agentcash/discovery localhost:3000
 | Command | Description |
 |---------|-------------|
 | `npm run dev` | Next.js dev server |
-| `npm run build` | Migrations + schema audit + production build |
+| `npm run build` | Migrations + production build |
 | `npm run test` | Vitest unit tests |
-| `npm run audit:schemas` | Verify all Linq SDK methods have routes |
 | `npm run test:discord` | Post sample line-status alerts to `DISCORD_WEBHOOK_URL` |
 | `npm run ensure:webhook` | Idempotent Linq `phone_number.status_updated` subscription |
 
