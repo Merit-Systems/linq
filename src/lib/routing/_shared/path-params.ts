@@ -22,7 +22,6 @@ function findDynamicSegmentIndex(parts: string[], paramName: string): number {
     chatId: ["chats"],
     messageId: ["messages"],
     attachmentId: ["attachments"],
-    phoneNumberId: ["phone-numbers"],
   };
   const parents = patterns[paramName];
   if (!parents) return -1;

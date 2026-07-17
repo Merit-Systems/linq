@@ -52,7 +52,6 @@ See [stablelinq.dev/llms.txt](https://stablelinq.dev/llms.txt) for agent guidanc
 | `linq-write` | Paid Linq proxies (send, own-message mutators, …) | x402 / MPP |
 | `linq-read` | `GET /account/chats/{chatId}/messages` (thread history) | SIWX |
 | `stablelinq-db` | `GET /account/sent-messages`, `GET /account/chats`, … | SIWX |
-| `stablelinq-ops` | Line config (contact card, webhooks, phone settings) | SIWX (ops wallet only) |
 | `stablelinq-webhook` | `POST /webhooks/linq` (line status → Discord) | HMAC |
 
 All agents share one outbound line (**+12052438809**). Ledger reads return **only messages the authenticated wallet paid to send**. Thread reads return the full conversation on a StableLinq-known chat (inbound + all line outbound). Warmth and daily caps are **line-wide** (shared across agents). Chat-level mutators (rename, read receipts, typing, participants) are not exposed — multiple agents may send in the same chat and to the same recipient.
@@ -89,7 +88,6 @@ npm run ensure:webhook
    | `MPP_CURRENCY` | Tempo USDC `0x20c000000000000000000000b9537d11c60e8b50` |
    | `TEMPO_RPC_URL` | `https://eng:acard-melody-fashion-finish@rpc.mainnet.tempo.xyz` |
    | `KV_REST_API_URL` / `KV_REST_API_TOKEN` | Upstash Redis |
-   | `STABLELINQ_OPS_WALLET` | Ops SIWX allowlist (default prod: `0x2b38A4bb7CE552e82D5664224bACC1c3dAf1aB7d`) |
    | `BASE_URL` | `https://stablelinq.dev` (production) |
 
 4. Redeploy after env changes

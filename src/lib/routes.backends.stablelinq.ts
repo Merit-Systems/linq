@@ -41,5 +41,4 @@ export type RouteBackend =
   | "linq-write"
   | "linq-read"
   | "stablelinq-db"
-  | "stablelinq-ops"
   | "stablelinq-webhook";

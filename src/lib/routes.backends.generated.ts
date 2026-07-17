@@ -67,30 +67,3 @@ export const LINQ_WRITE_ROUTES = [
     "backend": "linq-write"
   }
 ] as const;
-
-export const STABLELINQ_OPS_ROUTES = [
-  {
-    "method": "POST",
-    "path": "internal/contact-card",
-    "slug": "contact-card/create",
-    "backend": "stablelinq-ops"
-  },
-  {
-    "method": "PATCH",
-    "path": "internal/contact-card",
-    "slug": "contact-card/update",
-    "backend": "stablelinq-ops"
-  },
-  {
-    "method": "PUT",
-    "path": "internal/phone-numbers/{phoneNumberId}",
-    "slug": "phone-numbers/update",
-    "backend": "stablelinq-ops"
-  },
-  {
-    "method": "GET",
-    "path": "internal/available-number",
-    "slug": "available-number/retrieve",
-    "backend": "stablelinq-ops"
-  }
-] as const;

@@ -23,7 +23,6 @@ StableLinq proxies **Linq Partner API v3** for **writes** (\`https://api.linqapp
 - **Delete / edit / react:** only on **your** messages (\`linqMessageId\` you paid to send).
 - **Warmth + daily caps:** **line-wide** — cold/warm is per \`(fromLine, recipient)\`; 50 cold / 6k surge caps are shared across all agents.
 - **Recipients:** multiple agents may text the same recipient (one thread on their phone).
-- **Line config** (contact card, phone settings): **not for agents** — ops wallet SIWX only (see below).
 
 ## Agent Workflow (Progressive)
 
@@ -122,14 +121,6 @@ Requires payment wallet + a \`SentMessage\` row for that \`linqMessageId\`. **$0
 - \`POST /api/messages/{messageId}/reactions\`
 
 404 if you did not send that message. You cannot delete/edit/react to another agent's sends.
-
-## Ops-only (not for general agents)
-
-Line configuration routes require SIWX from the **ops allowlisted wallet** (\`STABLELINQ_OPS_WALLET\`, default \`0x2b38…aB7d\`). Other wallets get **403**.
-
-- \`POST\` / \`PATCH /api/internal/contact-card\`
-- \`PUT /api/internal/phone-numbers/{phoneNumberId}\`
-- \`GET /api/internal/available-number\`
 
 ## Key agent endpoints
 
