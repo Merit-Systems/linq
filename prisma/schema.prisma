@@ -1,0 +1,21 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model RecipientWarmth {
+  id              String   @id @default(cuid())
+  fromLine        String
+  recipient       String
+  firstOutboundAt DateTime @default(now())
+  chatId          String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([fromLine, recipient])
+  @@index([recipient])
+}

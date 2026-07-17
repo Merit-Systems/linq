@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Next.js
+.next/
+out/
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+
+# Test
+coverage/
+
+# Vercel
+.vercel
+
+# Prisma generated client
+generated/
+
+# TypeScript
+*.tsbuildinfo

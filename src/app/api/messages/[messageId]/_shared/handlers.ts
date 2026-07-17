@@ -1,0 +1,52 @@
+import { NextResponse } from "next/server";
+import { linq } from "@/lib/linq/client";
+import { mapLinqError } from "@/lib/linq/errors";
+import { pathParamFromRequest } from "@/lib/routing/_shared/path-params";
+
+export async function handleMessagesRetrieve(ctx: {
+  request: Request;
+  body?: unknown;
+  query?: unknown;
+  wallet?: string | null;
+}) {
+  const { request } = ctx;
+  const messageId = pathParamFromRequest(request, "messageId");
+  try {
+    const result = await linq.messages.retrieve(messageId);
+    return NextResponse.json(result ?? {});
+  } catch (err) {
+    throw mapLinqError(err);
+  }
+}
+
+export async function handleMessagesDelete(ctx: {
+  request: Request;
+  body?: unknown;
+  query?: unknown;
+  wallet?: string | null;
+}) {
+  const { request } = ctx;
+  const messageId = pathParamFromRequest(request, "messageId");
+  try {
+    const result = await linq.messages.delete(messageId);
+    return NextResponse.json(result ?? {});
+  } catch (err) {
+    throw mapLinqError(err);
+  }
+}
+
+export async function handleMessagesUpdate(ctx: {
+  request: Request;
+  body?: unknown;
+  query?: unknown;
+  wallet?: string | null;
+}) {
+  const { request, body } = ctx;
+  const messageId = pathParamFromRequest(request, "messageId");
+  try {
+    const result = await linq.messages.update(messageId, body as never);
+    return NextResponse.json(result ?? {});
+  } catch (err) {
+    throw mapLinqError(err);
+  }
+}
