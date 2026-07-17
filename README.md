@@ -1,98 +1,87 @@
-# StableLinq
+<p align="center">
+  <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: separate; border-spacing: 0;">
+    <tr>
+      <td align="center" bgcolor="#141414" style="border-radius: 12px; padding: 28px 24px;">
+        <a href="https://linqapp.com">
+          <img src="docs/assets/linq-logo.png" alt="Linq" height="44" />
+        </a>
+        &nbsp;&nbsp;&nbsp;
+        <span style="color: #666; font-size: 20px;">×</span>
+        &nbsp;&nbsp;&nbsp;
+        <a href="https://agentcash.dev">
+          <img src="docs/assets/agentcash-logo-dark.svg" alt="AgentCash" height="36" />
+        </a>
+      </td>
+    </tr>
+  </table>
+</p>
 
-iMessage, RCS, and SMS for agents — full [Linq Partner API v3](https://linqapp.com) behind [x402](https://x402.org) and MPP micropayments.
+<h1 align="center">StableLinq</h1>
 
-Pay with USDC on Base or Tempo. No API keys. No accounts.
+<p align="center">
+  <strong>iMessage, RCS &amp; SMS for the Open Agentic Web</strong><br />
+  <a href="https://stablelinq.dev"><strong>stablelinq.dev</strong></a>
+</p>
 
-## Stack
+---
 
-- Next.js 16 + `@agentcash/router`
-- `@linqapp/sdk` 0.28.2 (SDK-aligned Zod schemas)
-- **Neon Postgres** — cold/warm recipient pairs (`RecipientWarmth`) + wallet-scoped send ledger (`SentMessage`)
-- **Upstash Redis** — daily surge + outbound-first counters, webhook dedupe, send ledger (ops)
+Agents are becoming a real customer segment — they discover services, compare prices, pay per call, and act without a human in the loop. StableLinq brings that model to conversational messaging: any agent on [AgentCash](https://agentcash.dev) can send and manage iMessage, RCS, and SMS through [Linq](https://linqapp.com), paying with USDC micropayments instead of signing up for another API account.
 
-## Development
+No API keys. No billing dashboards. No subscriptions. Tell your agent who to text.
 
-```bash
-cp .env.example .env.local
-# Fill LINQ_API_KEY, PAYEE_ADDRESS, CDP keys, DATABASE_URL (Neon), KV, optional MPP trio
+## Agentic commerce for messaging
 
-npm install
-npm run db:migrate:dev   # first time: apply RecipientWarmth migration
-npm run dev
+Most messaging APIs were built for apps with human operators — sign up, generate keys, negotiate rate limits, wire up Stripe. Agents don't work that way. They need to discover what's available, see the price upfront, pay, and move on.
+
+StableLinq is listed on the Open Agentic Web like any other AgentCash service. An agent discovers the endpoint, gets a quote, pays via [x402](https://x402.org) or MPP, and the message goes out on iMessage (with RCS and SMS fallback). Reads — chat history, send ledger, warmth checks — are free with wallet identity.
+
+```
+Agent                         StableLinq
+  |                                |
+  |-- "text this number" -------->|
+  |<-- 402 + price ----------------|
+  |-- pays USDC, retries --------->|
+  |<-- delivered ------------------|
 ```
 
-Parameterized routes: use OpenAPI `{param}` syntax in `.path()` (e.g. `chats/{chatId}/messages`), not `:param` — AgentCash `check_endpoint_schema` matches concrete UUIDs to brace templates only.
+That's it. One wallet balance, one discovery flow, native messaging protocols.
 
-Discovery locally:
+## What agents can do
 
-```bash
-npx @agentcash/discovery localhost:3000
-```
+- **Send messages** — iMessage first, then RCS, then SMS. Reactions, voice memos, media, attachments.
+- **Follow up in existing threads** — warm conversations cost less than cold outreach.
+- **Check before sending** — iMessage/RCS capability checks, warmth pre-checks, thread history.
+- **Manage their own sends** — edit, delete, or react to messages they paid for.
 
-## Scripts
-
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Next.js dev server |
-| `npm run build` | Migrations + production build |
-| `npm run ensure:webhook` | Idempotent Linq `phone_number.status_updated` subscription |
-
-See [stablelinq.dev/llms.txt](https://stablelinq.dev/llms.txt) for agent guidance and endpoint composition.
+Every agent shares one outbound line. Your wallet owns what you paid to send; the thread belongs to the conversation.
 
 ## Pricing
 
-- **Cold outbound-first** (new recipient): **$0.50/recipient**, **50 new recipients/day** global cap — text-only opener required; cold-only sends pay `max($0.50/recipient, surge slot price)` so they are never cheaper than warm at the same slot
-- **Warm follow-ups** (existing chat or warm pair): surge **$0.05–$1.25**, **6000/day** UTC cap
-- **Per-request bounds:** `POST /api/messages` up to **$26.25** (mixed: 50 cold × $0.50 + max surge); cold-only same request up to **$25.00**; follow-ups/voicememo **$0.05–$1.25**
-- **All other paid endpoints**: **$0.02** flat
-- **Reads**: free with SIWX — ledger via `GET /api/account/sent-messages` and `GET /api/account/chats` (wallet-scoped); thread history via `GET /api/account/chats/{chatId}/messages` (line-known chats); warmth pre-check via `POST /api/messages/warmth` (line-wide, free)
+Pay per call, quoted before you commit.
 
-## Route backends
+| | |
+| --- | --- |
+| New recipient (cold) | $0.50 — text-only opener, 50/day cap |
+| Follow-up (warm) | $0.05–$1.25 surge pricing |
+| Everything else | $0.02 flat |
+| Reads | Free with wallet auth |
 
-| Backend | Routes | Auth |
-|---------|--------|------|
-| `linq-write` | Paid Linq proxies (send, own-message mutators, …) | x402 / MPP |
-| `linq-read` | `GET /account/chats/{chatId}/messages` (thread history) | SIWX |
-| `stablelinq-db` | `GET /account/sent-messages`, `GET /account/chats`, `POST /messages/warmth`, … | SIWX |
-| `stablelinq-webhook` | `POST /webhooks/linq` (line status → Discord) | HMAC |
+Cold openers must be plain text — no links or media on a first touch.
 
-All agents share one outbound line (**+12052438809**). Ledger reads return **only messages the authenticated wallet paid to send**. Thread reads return the full conversation on a StableLinq-known chat (inbound + all line outbound). Warmth and daily caps are **line-wide** (shared across agents). Chat-level mutators (rename, read receipts, typing, participants) are not exposed — multiple agents may send in the same chat and to the same recipient.
+## For agents
 
-## First-message rule
-
-First outbound to a cold recipient must be **text-only** — no links, media, or URLs. Warmth is stored in **Postgres** (`RecipientWarmth` on `(fromLine, recipient)`).
-
-## Line status alerts (Discord)
-
-Linq fires `phone_number.status_updated` when a line's **status** (`ACTIVE`/`FLAGGED`) or **reputation** (`HEALTHY`/`AT_RISK`/`CRITICAL`) changes. StableLinq receives these at `POST /api/webhooks/linq`, verifies HMAC with `LINQ_WEBHOOK_SECRET`, and posts to `DISCORD_WEBHOOK_URL`.
-
-After deploy:
+Install [AgentCash](https://agentcash.dev), fund your wallet, and discover StableLinq:
 
 ```bash
-npm run ensure:webhook
+npx @agentcash/discovery stablelinq.dev
 ```
 
-## Deploy (Vercel)
+Full endpoint schemas, composition patterns, and pricing rules: **[stablelinq.dev/llms.txt](https://stablelinq.dev/llms.txt)**
 
-1. Create project **`stable-linq`** rooted at this repo
-2. Provision **Neon** database in the `merit-systems` workspace (`neonctl`); set `DATABASE_URL`
-3. Set env vars (all environments):
+OpenAPI: **[stablelinq.dev/openapi.json](https://stablelinq.dev/openapi.json)**
 
-   | Variable | Notes |
-   |----------|-------|
-   | `DATABASE_URL` | Neon pooled connection string |
-   | `LINQ_API_KEY` | Linq Partner API key |
-   | `LINQ_WEBHOOK_SECRET` | Linq webhook signing secret |
-   | `DISCORD_WEBHOOK_URL` | Discord incoming webhook for line alerts |
-   | `PAYEE_ADDRESS` | Fresh EVM recipient (never reuse) |
-   | `CDP_API_KEY_ID` / `CDP_API_KEY_SECRET` | Copy from stabledomains |
-   | `MPP_SECRET_KEY` | Fresh: `openssl rand -base64 32` |
-   | `MPP_CURRENCY` | Tempo USDC `0x20c000000000000000000000b9537d11c60e8b50` |
-   | `TEMPO_RPC_URL` | `https://eng:acard-melody-fashion-finish@rpc.mainnet.tempo.xyz` |
-   | `KV_REST_API_URL` / `KV_REST_API_TOKEN` | Upstash Redis |
-   | `BASE_URL` | `https://stablelinq.dev` (production) |
+---
 
-4. Redeploy after env changes
-5. Run `npm run ensure:webhook` once production URL is live
-6. Verify dual protocol: `npx @agentcash/discovery stablelinq.dev`
+<p align="center">
+  <a href="https://linqapp.com">Linq</a> powers delivery · <a href="https://agentcash.dev">AgentCash</a> powers payments
+</p>
