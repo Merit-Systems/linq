@@ -81,12 +81,6 @@ export {
   type ParticipantRemoveParamsInput,
 } from "./participant-remove-params";
 export {
-  paymentRequestCreateHeadersSchema,
-  paymentRequestCreateParamsSchema,
-  type PaymentRequestCreateParamsInput,
-} from "./payment-request-create-params";
-export { paymentRequestListParamsSchema } from "./payment-request-list-params";
-export {
   phoneNumberUpdateParamsSchema,
   type PhoneNumberUpdateParams,
 } from "./phone-number-update-params";

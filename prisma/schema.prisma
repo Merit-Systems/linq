@@ -19,3 +19,24 @@ model RecipientWarmth {
   @@unique([fromLine, recipient])
   @@index([recipient])
 }
+
+model SentMessage {
+  id                  String   @id @default(cuid())
+  walletAddress       String
+  slug                String
+  fromLine            String
+  recipients          String[]
+  chatId              String?
+  linqMessageId       String?
+  priceUsd            String
+  coldRecipientCount  Int      @default(0)
+  warmRecipientCount  Int      @default(0)
+  messagePreview      String?
+  requestBody         Json
+  linqResponse        Json?
+  createdAt           DateTime @default(now())
+
+  @@index([walletAddress, createdAt(sort: Desc), id(sort: Desc)])
+  @@index([walletAddress, chatId])
+  @@index([linqMessageId])
+}

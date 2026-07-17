@@ -34,23 +34,9 @@ export const listMessagesPaginationResponseSchema = z.object({
   next_cursor: z.string(),
 });
 
-/** Payment requests use offset pagination (SDK gap — OpenAPI). */
-export const paymentRequestListParamsSchema = z
-  .object({
-    limit: paginationLimitSchema,
-    offset: z.coerce.number().int().nonnegative().optional(),
-    status: z
-      .enum(["requested", "succeeded", "canceled", "expired"])
-      .optional(),
-  })
-  .strict();
-
 export type ListChatsPaginationParams = z.infer<
   typeof listChatsPaginationParamsSchema
 >;
 export type ListMessagesPaginationParams = z.infer<
   typeof listMessagesPaginationParamsSchema
->;
-export type PaymentRequestListParams = z.infer<
-  typeof paymentRequestListParamsSchema
 >;

@@ -1,18 +1,10 @@
+// StableLinq backend: linq-write (proxies Linq Partner API v3)
 import { FLAT_PRICE_USD_STRING } from "@/lib/pricing";
 import { emptyObjectSchema } from "@/lib/schemas/linq/common";
-import { handleMessagesRetrieve, handleMessagesDelete, handleMessagesUpdate } from "./_shared/handlers";
+import { handleMessagesDelete, handleMessagesUpdate } from "./_shared/handlers";
 import { messageSchema } from "@/lib/schemas/linq/responses/message-responses";
 import { messageUpdateParamsSchema } from "@/lib/schemas/linq/params/message-update-params";
 import { router, paidOpts } from "@/lib/router";
-
-export const GET = router
-  .route("messages-retrieve")
-  .path("messages/:messageId")
-  .method("GET")
-  .siwx()
-  .output(messageSchema)
-  .description("Retrieve a message by ID.")
-  .handler(handleMessagesRetrieve);
 
 export const DELETE = router
   .route("messages-delete")

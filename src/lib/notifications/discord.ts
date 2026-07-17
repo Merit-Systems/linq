@@ -1,10 +1,12 @@
 import {
   buildPhoneStatusDiscordEmbed,
   extractPhoneStatusChanges,
+  phoneStatusAlertHeading,
   type PhoneNumberStatusUpdatedData,
 } from "@/lib/webhooks/linq/phone-number-status";
 
 export async function postDiscordWebhook(payload: {
+  username?: string;
   content?: string;
   embeds?: unknown[];
 }): Promise<void> {
@@ -33,6 +35,7 @@ export async function postDiscordPhoneStatusAlert(
   if (!changes) return false;
 
   await postDiscordWebhook({
+    username: phoneStatusAlertHeading(changes),
     embeds: [buildPhoneStatusDiscordEmbed(changes)],
   });
   return true;

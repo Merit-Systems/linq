@@ -7,6 +7,5 @@ export * from "./message-parts";
 export * from "./message-content";
 export * from "./shared-response";
 export * from "./pagination";
-export * from "./payment-requests";
 export * from "./params/index";
 export * from "./responses/index";

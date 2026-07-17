@@ -16,9 +16,8 @@ describe("SDK schema alignment", () => {
       join(ROOT, "src/lib/routes.registry.ts"),
       "utf8",
     );
-    expect(registry).toContain('import "@/app/api/chats/route"');
-    expect(registry).toContain('import "@/app/api/messages/route"');
-    expect(registry).toContain('import "@/app/api/payment-requests/route"');
+    expect(registry).toContain('import "@/lib/routes.linq.registry"');
+    expect(registry).toContain('import "@/lib/routes.stablelinq.registry"');
   });
 
   it("message content schema includes part types", () => {

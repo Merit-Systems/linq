@@ -12,7 +12,11 @@ export default function HomePage() {
       <p className="mb-8 text-lg leading-relaxed text-neutral-600">
         Full Linq Partner API v3 behind x402 and MPP micropayments. Send and
         manage chats with USDC — no API keys, no accounts. Agents pay per call;
-        reads are free with SIWX wallet proof.
+        reads are free with SIWX and scoped to your wallet via{" "}
+        <code className="rounded bg-neutral-100 px-1.5 py-0.5 text-sm">
+          GET /api/account/*
+        </code>
+        .
       </p>
       <ul className="mb-10 space-y-2 text-neutral-700">
         <li>

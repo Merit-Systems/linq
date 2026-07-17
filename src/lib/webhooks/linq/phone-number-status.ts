@@ -42,40 +42,50 @@ export function severityColor(changes: PhoneStatusChanges): number {
   return 0x57_f2_87;
 }
 
-export function buildPhoneStatusDiscordEmbed(changes: PhoneStatusChanges) {
-  const { data, statusChanged, reputationChanged } = changes;
-  const fields: Array<{ name: string; value: string; inline?: boolean }> = [
-    { name: "Line", value: data.phone_number, inline: true },
-    { name: "Changed at", value: data.changed_at, inline: true },
-  ];
+export function formatChangedAt(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  return date.toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: "UTC",
+    timeZoneName: "short",
+  });
+}
 
-  if (statusChanged) {
-    fields.push({
-      name: "Status",
-      value: `${data.previous_status} → ${data.new_status}`,
-      inline: false,
-    });
-  }
-
-  if (reputationChanged) {
-    fields.push({
-      name: "Reputation",
-      value: `${data.previous_reputation} → ${data.new_reputation}`,
-      inline: false,
-    });
-  }
-
+export function phoneStatusAlertHeading(changes: PhoneStatusChanges): string {
+  const { data } = changes;
   const degraded =
     data.new_status === "FLAGGED" ||
     data.new_reputation === "CRITICAL" ||
     data.new_reputation === "AT_RISK";
+  return degraded ? "StableLinq line alert" : "StableLinq line recovered";
+}
+
+export function buildPhoneStatusDiscordEmbed(changes: PhoneStatusChanges) {
+  const { data, statusChanged, reputationChanged } = changes;
+  const lines = [
+    `**${data.phone_number}** · ${formatChangedAt(data.changed_at)}`,
+  ];
+
+  const deltas: string[] = [];
+  if (statusChanged) {
+    deltas.push(`Status **${data.previous_status} → ${data.new_status}**`);
+  }
+  if (reputationChanged) {
+    deltas.push(
+      `Reputation **${data.previous_reputation} → ${data.new_reputation}**`,
+    );
+  }
+  if (deltas.length > 0) {
+    lines.push(deltas.join(" · "));
+  }
 
   return {
-    title: degraded
-      ? "StableLinq line alert"
-      : "StableLinq line recovered",
     color: severityColor(changes),
-    fields,
-    footer: { text: "Linq phone_number.status_updated" },
+    description: lines.join("\n"),
   };
 }

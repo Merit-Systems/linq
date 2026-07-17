@@ -1,3 +1,4 @@
+// StableLinq backend: linq-write (proxies Linq Partner API v3)
 import { FLAT_PRICE_USD_STRING } from "@/lib/pricing";
 import { capabilityCheckRCSParamsSchema } from "@/lib/schemas/linq/params/capability-check-rcs-params";
 import { handleCapabilityCheckRcs } from "./_shared/handlers";

@@ -2,11 +2,37 @@
 /**
  * Generates route modules (index.ts, schema.ts, handler.ts) and app/api re-exports.
  */
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync, existsSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
+
+/** Not exposed to agents — shared line, ops-only, or replaced by POST /messages. */
+const REMOVED_AGENT_WRITE_SLUGS = new Set([
+  "chats/create",
+  "chats/update",
+  "chats/mark-as-read",
+  "chats/leave",
+  "chats/share-contact-card",
+  "chats/participants/add",
+  "chats/participants/remove",
+  "chats/typing/start",
+  "chats/typing/stop",
+  "chats/location/request",
+]);
+
+function isAgentRoute(def) {
+  return (
+    def.auth !== "siwx" &&
+    !def.opsOnly &&
+    !REMOVED_AGENT_WRITE_SLUGS.has(def.slug)
+  );
+}
+
+function isOpsRoute(def) {
+  return def.opsOnly === true;
+}
 
 /** @type {Array<RouteDef>} */
 const ROUTES = [
@@ -48,6 +74,7 @@ const ROUTES = [
     messagePricing: "outbound",
     injectFrom: true,
     markWarm: true,
+    recordSent: true,
   },
   {
     slug: "chats/list",
@@ -132,6 +159,7 @@ const ROUTES = [
     desc: "Send an iMessage voice memo to a chat.",
     messagePricing: "followup",
     coldValidateInHandler: true,
+    recordSent: true,
   },
   {
     slug: "chats/participants/add",
@@ -216,6 +244,7 @@ const ROUTES = [
     outputFrom: "responses/chat-responses",
     desc: "Send a message to an existing chat.",
     messagePricing: "followup",
+    recordSent: true,
   },
   {
     slug: "chats/messages/list",
@@ -240,10 +269,11 @@ const ROUTES = [
     bodyFrom: "params/message-create-params",
     outputImport: "messageCreateResponseSchema",
     outputFrom: "responses/message-responses",
-    desc: "Send a message to one or more recipients. Outbound-first pricing applies per new recipient (50/day cap).",
+    desc: "Send a message to one or more recipients (cold start or warm). Reuses an existing chat when possible. First contact to a new recipient must be text-only (no links/media/URLs). Outbound-first pricing applies per new recipient (50/day cap).",
     messagePricing: "outbound",
     injectFrom: true,
     markWarm: true,
+    recordSent: true,
   },
   {
     slug: "messages/retrieve",
@@ -266,6 +296,7 @@ const ROUTES = [
     outputImport: "emptyObjectSchema",
     outputFrom: "common",
     desc: "Delete a message.",
+    requireMessageOwnership: true,
   },
   {
     slug: "messages/update",
@@ -279,6 +310,7 @@ const ROUTES = [
     outputImport: "messageSchema",
     outputFrom: "responses/message-responses",
     desc: "Edit a message.",
+    requireMessageOwnership: true,
   },
   {
     slug: "messages/update-app-card",
@@ -292,6 +324,7 @@ const ROUTES = [
     outputImport: "messageUpdateAppCardResponseSchema",
     outputFrom: "responses/message-responses",
     desc: "Update an iMessage app card.",
+    requireMessageOwnership: true,
   },
   {
     slug: "messages/add-reaction",
@@ -305,6 +338,7 @@ const ROUTES = [
     outputImport: "messageAddReactionResponseSchema",
     outputFrom: "responses/message-responses",
     desc: "Add a reaction to a message.",
+    requireMessageOwnership: true,
   },
   {
     slug: "messages/list-thread",
@@ -330,17 +364,6 @@ const ROUTES = [
     outputImport: "attachmentCreateResponseSchema",
     outputFrom: "responses/attachment-responses",
     desc: "Pre-upload attachment — returns presigned upload URL.",
-  },
-  {
-    slug: "attachments/retrieve",
-    apiPath: "attachments/{attachmentId}",
-    method: "GET",
-    auth: "siwx",
-    pathParam: "attachmentId",
-    sdkCall: "linq.attachments.retrieve(attachmentId)",
-    outputImport: "attachmentRetrieveResponseSchema",
-    outputFrom: "responses/attachment-responses",
-    desc: "Retrieve attachment metadata.",
   },
   {
     slug: "attachments/delete",
@@ -376,6 +399,7 @@ const ROUTES = [
     outputImport: "setContactCardSchema",
     outputFrom: "responses/contact-card-responses",
     desc: "Create contact card configuration.",
+    opsOnly: true,
   },
   {
     slug: "contact-card/update",
@@ -388,6 +412,7 @@ const ROUTES = [
     outputImport: "setContactCardSchema",
     outputFrom: "responses/contact-card-responses",
     desc: "Update contact card configuration.",
+    opsOnly: true,
   },
   {
     slug: "phone-numbers/list",
@@ -411,6 +436,7 @@ const ROUTES = [
     outputImport: "phoneNumberUpdateResponseSchema",
     outputFrom: "responses/phone-number-responses",
     desc: "Update phone number settings.",
+    opsOnly: true,
   },
   {
     slug: "phonenumbers/list",
@@ -433,56 +459,7 @@ const ROUTES = [
     outputImport: "availableNumberRetrieveResponseSchema",
     outputFrom: "responses/available-number-responses",
     desc: "Find an available phone number.",
-  },
-  {
-    slug: "payment-requests/create",
-    apiPath: "payment-requests",
-    method: "POST",
-    auth: "paid-flat",
-    sdkCall: "createPaymentRequest(body)",
-    bodyImport: "paymentRequestCreateParamsSchema",
-    bodyFrom: "params/payment-request-create-params",
-    outputImport: "paymentRequestSchema",
-    outputFrom: "payment-requests",
-    desc: "Create a Linq payment request (SDK gap — REST).",
-    rest: true,
-  },
-  {
-    slug: "payment-requests/list",
-    apiPath: "payment-requests",
-    method: "GET",
-    auth: "siwx",
-    sdkCall: "listPaymentRequests(query ?? undefined)",
-    queryImport: "paymentRequestListParamsSchema",
-    queryFrom: "params/payment-request-list-params",
-    outputImport: "paymentRequestListResponseSchema",
-    outputFrom: "payment-requests",
-    desc: "List payment requests.",
-    rest: true,
-  },
-  {
-    slug: "payment-requests/retrieve",
-    apiPath: "payment-requests/{paymentRequestId}",
-    method: "GET",
-    auth: "siwx",
-    pathParam: "paymentRequestId",
-    sdkCall: "retrievePaymentRequest(paymentRequestId)",
-    outputImport: "paymentRequestSchema",
-    outputFrom: "payment-requests",
-    desc: "Retrieve a payment request.",
-    rest: true,
-  },
-  {
-    slug: "payment-requests/cancel",
-    apiPath: "payment-requests/{paymentRequestId}/cancel",
-    method: "POST",
-    auth: "paid-flat",
-    pathParam: "paymentRequestId",
-    sdkCall: "cancelPaymentRequest(paymentRequestId)",
-    outputImport: "paymentRequestSchema",
-    outputFrom: "payment-requests",
-    desc: "Cancel a payment request.",
-    rest: true,
+    opsOnly: true,
   },
   {
     slug: "webhook-events/list",
@@ -505,6 +482,7 @@ const ROUTES = [
     outputImport: "webhookSubscriptionCreateResponseSchema",
     outputFrom: "responses/webhook-responses",
     desc: "Create a webhook subscription.",
+    opsOnly: true,
   },
   {
     slug: "webhook-subscriptions/list",
@@ -539,6 +517,7 @@ const ROUTES = [
     outputImport: "webhookSubscriptionSchema",
     outputFrom: "responses/webhook-responses",
     desc: "Update a webhook subscription.",
+    opsOnly: true,
   },
   {
     slug: "webhook-subscriptions/delete",
@@ -550,6 +529,7 @@ const ROUTES = [
     outputImport: "emptyObjectSchema",
     outputFrom: "common",
     desc: "Delete a webhook subscription.",
+    opsOnly: true,
   },
 ];
 
@@ -584,46 +564,73 @@ function toRouterPath(apiPath) {
   return apiPath.replace(/\{([^}]+)\}/g, ":$1");
 }
 
-function collectHandlerImports(def) {
+function collectHandlerImports(defs) {
   const imports = new Set([
     `import { NextResponse } from "next/server";`,
     `import { mapLinqError } from "@/lib/linq/errors";`,
   ]);
 
-  if (def.rest) {
-    imports.add(
-      `import { ${def.sdkCall.replace(/\(.*/, "")} } from "@/lib/linq/rest";`,
-    );
-  } else {
-    imports.add(`import { linq } from "@/lib/linq/client";`);
+  const needsLinq = defs.some((d) => !d.rest);
+  const needsRest = defs.some((d) => d.rest);
+  if (needsLinq) imports.add(`import { linq } from "@/lib/linq/client";`);
+  if (needsRest) {
+    for (const def of defs.filter((d) => d.rest)) {
+      imports.add(
+        `import { ${def.sdkCall.replace(/\(.*/, "")} } from "@/lib/linq/rest";`,
+      );
+    }
   }
 
-  if (def.messagePricing === "outbound") {
+  if (defs.some((d) => d.messagePricing === "outbound")) {
     imports.add(
       `import { reserveMessageSendSlots, markColdRecipientsWarm } from "@/lib/routing/_shared/message-pricing";`,
     );
-  } else if (def.messagePricing === "followup") {
+  }
+  if (defs.some((d) => d.messagePricing === "followup")) {
     imports.add(
       `import { reserveFollowUpMessageSlot } from "@/lib/routing/_shared/message-pricing";`,
     );
   }
 
-  if (def.injectFrom) {
+  if (defs.some((d) => d.injectFrom)) {
     imports.add(
       `import { injectFromLine } from "@/lib/routing/_shared/from-line";`,
     );
   }
 
-  if (def.coldValidateInHandler) {
+  if (defs.some((d) => d.coldValidateInHandler)) {
     imports.add(
       `import { validateColdOutbound } from "@/lib/routing/_shared/first-message-validate";`,
     );
   }
 
-  if (def.pathParam ?? def.apiPath.match(/\{([^}]+)\}/)?.[1]) {
+  if (
+    defs.some(
+      (d) =>
+        Boolean(d.pathParam) ||
+        Boolean(d.apiPath.match(/\{([^}]+)\}/)?.[1]) ||
+        d.requireMessageOwnership,
+    )
+  ) {
     imports.add(
       `import { pathParamFromRequest } from "@/lib/routing/_shared/path-params";`,
     );
+  }
+
+  if (defs.some((d) => d.recordSent)) {
+    imports.add(
+      `import { recordSentMessage } from "@/lib/stablelinq/sent-messages/repository";`,
+    );
+  }
+
+  if (defs.some((d) => d.requireMessageOwnership)) {
+    imports.add(
+      `import { assertWalletOwnsMessage } from "@/lib/stablelinq/sent-messages/repository";`,
+    );
+  }
+
+  if (defs.some((d) => d.opsOnly)) {
+    imports.add(`import { assertOpsWallet } from "@/lib/stablelinq/ops-auth";`);
   }
 
   return imports;
@@ -638,7 +645,13 @@ function handlerCtxBindings(def, pathParam) {
     fields.add("body");
   }
   if (def.queryImport) fields.add("query");
-  if (def.messagePricing) fields.add("wallet");
+  if (
+    def.messagePricing ||
+    def.requireMessageOwnership ||
+    def.opsOnly
+  ) {
+    fields.add("wallet");
+  }
   return [...fields];
 }
 
@@ -661,14 +674,23 @@ function genHandlerFn(def) {
     body += `  const ${pathParam} = pathParamFromRequest(request, "${pathParam}");\n`;
   }
 
+  if (def.opsOnly) {
+    body += `  assertOpsWallet(wallet);\n`;
+  }
+
   if (def.coldValidateInHandler) {
     body += `  await validateColdOutbound("${slug}", { body, request });\n`;
   }
 
+  if (def.requireMessageOwnership && pathParam) {
+    body += `  if (!wallet) throw Object.assign(new Error("Wallet required"), { status: 401 });\n`;
+    body += `  await assertWalletOwnsMessage({ walletAddress: wallet, linqMessageId: ${pathParam} });\n`;
+  }
+
   if (def.messagePricing === "outbound") {
-    body += `  const { classified } = await reserveMessageSendSlots("${slug}", body, request, wallet ?? null);\n`;
+    body += `  const { classified, priceUsd } = await reserveMessageSendSlots("${slug}", body, request, wallet ?? null);\n`;
   } else if (def.messagePricing === "followup") {
-    body += `  await reserveFollowUpMessageSlot(wallet ?? null, "${slug}");\n`;
+    body += `  const { priceUsd } = await reserveFollowUpMessageSlot(wallet ?? null, "${slug}");\n`;
   }
 
   body += `  try {\n`;
@@ -703,10 +725,24 @@ function genHandlerFn(def) {
 
   body += `    const result = await ${sdkCall};\n`;
 
-  if (def.markWarm && def.slug === "chats/create") {
-    body += `    await markColdRecipientsWarm(classified.cold, (result as { chat?: { id?: string } }).chat?.id);\n`;
-  } else if (def.markWarm && def.slug === "messages/create") {
+  if (def.markWarm && def.slug === "messages/create") {
     body += `    await markColdRecipientsWarm(classified.cold);\n`;
+  }
+
+  if (def.recordSent) {
+    body += `    await recordSentMessage({\n`;
+    body += `      wallet,\n`;
+    body += `      slug: "${slug}",\n`;
+    body += `      body,\n`;
+    body += `      result,\n`;
+    body += `      priceUsd,\n`;
+    if (def.messagePricing === "outbound") {
+      body += `      classified,\n`;
+    }
+    if (pathParam) {
+      body += `      chatId: ${pathParam},\n`;
+    }
+    body += `    });\n`;
   }
 
   body += `    return NextResponse.json(result ?? {});\n`;
@@ -719,10 +755,7 @@ function genHandlerFn(def) {
 }
 
 function genHandlersFile(defs) {
-  const importSet = new Set();
-  for (const def of defs) {
-    for (const imp of collectHandlerImports(def)) importSet.add(imp);
-  }
+  const importSet = collectHandlerImports(defs);
   const functions = defs.map((d) => genHandlerFn(d)).join("\n");
   return `${[...importSet].sort().join("\n")}\n\n${functions}`;
 }
@@ -730,7 +763,7 @@ function genHandlersFile(defs) {
 function collectRouteImports(def) {
   const imports = new Set();
 
-  if (def.auth === "paid-flat") {
+  if (!def.opsOnly && def.auth === "paid-flat") {
     imports.add(`import { FLAT_PRICE_USD_STRING } from "@/lib/pricing";`);
   } else if (def.messagePricing === "outbound") {
     imports.add(
@@ -761,9 +794,11 @@ function collectRouteImports(def) {
   return imports;
 }
 
-function genRouteFile(defs) {
+function genRouteFile(defs, banner) {
   const importSet = new Set();
-  const needsPaidOpts = defs.some((d) => d.auth.startsWith("paid"));
+  const needsPaidOpts = defs.some(
+    (d) => !d.opsOnly && d.auth.startsWith("paid"),
+  );
   importSet.add(
     needsPaidOpts
       ? `import { router, paidOpts } from "@/lib/router";`
@@ -776,7 +811,7 @@ function genRouteFile(defs) {
   const handlerNames = defs.map((d) => handlerName(d)).join(", ");
   importSet.add(`import { ${handlerNames} } from "./_shared/handlers";`);
   const exports = defs.map((d) => genRouteExportOnly(d)).join("\n");
-  return `${[...importSet].sort().join("\n")}\n\n${exports}`;
+  return `// ${banner}\n${[...importSet].sort().join("\n")}\n\n${exports}`;
 }
 
 function genRouteExportOnly(def) {
@@ -787,7 +822,9 @@ function genRouteExportOnly(def) {
 
   let chain = `router\n  .route("${routeId}")\n  .path("${routerPath}")\n  .method("${method}")\n`;
 
-  if (def.auth === "siwx") {
+  if (def.opsOnly) {
+    chain += `  .siwx()\n`;
+  } else if (def.auth === "siwx") {
     chain += `  .siwx()\n`;
   } else if (def.auth === "paid-flat") {
     chain += `  .paid(FLAT_PRICE_USD_STRING, { ...paidOpts(), maxPrice: FLAT_PRICE_USD_STRING })\n`;
@@ -806,27 +843,112 @@ function genRouteExportOnly(def) {
   return `export const ${method} = ${chain};\n`;
 }
 
+/** Agent-facing routes — excludes SIWX Linq reads, ops-only, and removed slugs. */
+const AGENT_ROUTES = ROUTES.filter(isAgentRoute);
+const OPS_ROUTES = ROUTES.filter(isOpsRoute);
+
 /** @type {Map<string, RouteDef[]>} */
-const routesByAppDir = new Map();
-for (const def of ROUTES) {
+const agentRoutesByAppDir = new Map();
+for (const def of AGENT_ROUTES) {
   const dir = appDirFor(def);
-  if (!routesByAppDir.has(dir)) routesByAppDir.set(dir, []);
-  routesByAppDir.get(dir).push(def);
+  if (!agentRoutesByAppDir.has(dir)) agentRoutesByAppDir.set(dir, []);
+  agentRoutesByAppDir.get(dir).push(def);
 }
 
-const registryImports = [];
+/** @type {Map<string, RouteDef[]>} */
+const opsRoutesByAppDir = new Map();
+for (const def of OPS_ROUTES) {
+  const dir = appDirFor(def);
+  if (!opsRoutesByAppDir.has(dir)) opsRoutesByAppDir.set(dir, []);
+  opsRoutesByAppDir.get(dir).push(def);
+}
 
-for (const [appDir, defs] of routesByAppDir) {
+const activeAppDirs = new Set([
+  ...agentRoutesByAppDir.keys(),
+  ...opsRoutesByAppDir.keys(),
+]);
+
+const agentRegistryImports = [];
+const opsRegistryImports = [];
+
+for (const appDir of activeAppDirs) {
+  const agentDefs = agentRoutesByAppDir.get(appDir) ?? [];
+  const opsDefs = opsRoutesByAppDir.get(appDir) ?? [];
+  const defs = [...agentDefs, ...opsDefs];
+  const banner =
+    agentDefs.length > 0 && opsDefs.length > 0
+      ? "StableLinq: agent paid + ops SIWX (shared app dir)"
+      : opsDefs.length > 0
+        ? "StableLinq backend: ops SIWX (line configuration — allowlisted wallet)"
+        : "StableLinq backend: linq-write (proxies Linq Partner API v3)";
   writeFile(join(appDir, "_shared/handlers.ts"), genHandlersFile(defs));
-  writeFile(join(appDir, "route.ts"), genRouteFile(defs));
-  registryImports.push(`import "${registryImportPath(appDir)}";`);
+  writeFile(join(appDir, "route.ts"), genRouteFile(defs, banner));
+  const importPath = registryImportPath(appDir);
+  if (agentDefs.length > 0) agentRegistryImports.push(`import "${importPath}";`);
+  if (opsDefs.length > 0) opsRegistryImports.push(`import "${importPath}";`);
 }
 
 writeFile(
-  join(ROOT, "src/lib/routes.registry.ts"),
-  `// Generated by scripts/generate-routes.mjs — side-effect imports register all routes.\n${registryImports.join("\n")}\n`,
+  join(ROOT, "src/lib/routes.linq.registry.ts"),
+  `// Generated by scripts/generate-routes.mjs — Linq write proxies (paid, agent-facing).\n${agentRegistryImports.join("\n")}\n`,
 );
 
+writeFile(
+  join(ROOT, "src/lib/routes.stablelinq-ops.registry.ts"),
+  `// Generated by scripts/generate-routes.mjs — ops SIWX (line config, allowlisted wallet).\n${opsRegistryImports.join("\n")}\n`,
+);
+
+writeFile(
+  join(ROOT, "src/lib/routes.registry.ts"),
+  `// Generated by scripts/generate-routes.mjs — side-effect imports register all routes.\nimport "@/lib/routes.linq.registry";\nimport "@/lib/routes.stablelinq.registry";\nimport "@/lib/routes.stablelinq-ops.registry";\n`,
+);
+
+const linqWriteRoutes = AGENT_ROUTES.map((def) => ({
+  method: def.method,
+  path: def.apiPath,
+  slug: def.slug,
+  backend: "linq-write",
+}));
+
+const opsWriteRoutes = OPS_ROUTES.map((def) => ({
+  method: def.method,
+  path: def.apiPath,
+  slug: def.slug,
+  backend: "stablelinq-ops",
+}));
+
+writeFile(
+  join(ROOT, "src/lib/routes.backends.generated.ts"),
+  `// Generated by scripts/generate-routes.mjs — Linq write proxy routes.\nexport const LINQ_WRITE_ROUTES = ${JSON.stringify(linqWriteRoutes, null, 2)} as const;\n\nexport const STABLELINQ_OPS_ROUTES = ${JSON.stringify(opsWriteRoutes, null, 2)} as const;\n`,
+);
+
+const removedDirs = new Set();
+for (const slug of REMOVED_AGENT_WRITE_SLUGS) {
+  const def = ROUTES.find((d) => d.slug === slug);
+  if (def) removedDirs.add(appDirFor(def));
+}
+
+for (const dir of removedDirs) {
+  if (activeAppDirs.has(dir)) continue;
+  const routePath = join(dir, "route.ts");
+  const handlersPath = join(dir, "_shared/handlers.ts");
+  if (existsSync(routePath)) rmSync(routePath);
+  if (existsSync(handlersPath)) rmSync(handlersPath);
+}
+
+const siwxOnlyDirs = new Set(
+  ROUTES.filter((def) => def.auth === "siwx" && !def.opsOnly).map((def) =>
+    appDirFor(def),
+  ),
+);
+for (const dir of siwxOnlyDirs) {
+  if (activeAppDirs.has(dir)) continue;
+  const routePath = join(dir, "route.ts");
+  const handlersPath = join(dir, "_shared/handlers.ts");
+  if (existsSync(routePath)) rmSync(routePath);
+  if (existsSync(handlersPath)) rmSync(handlersPath);
+}
+
 console.log(
-  `Generated ${ROUTES.length} routes across ${routesByAppDir.size} app directories.`,
+  `Generated ${AGENT_ROUTES.length} agent routes, ${OPS_ROUTES.length} ops routes (${ROUTES.length - AGENT_ROUTES.length - OPS_ROUTES.length} SIWX Linq reads excluded) across ${activeAppDirs.size} app directories.`,
 );

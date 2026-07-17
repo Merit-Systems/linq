@@ -23,7 +23,6 @@ function findDynamicSegmentIndex(parts: string[], paramName: string): number {
     messageId: ["messages"],
     attachmentId: ["attachments"],
     phoneNumberId: ["phone-numbers"],
-    paymentRequestId: ["payment-requests"],
     subscriptionId: ["webhook-subscriptions"],
   };
   const parents = patterns[paramName];

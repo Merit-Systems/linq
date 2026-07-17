@@ -1,3 +1,4 @@
+// StableLinq backend: linq-write (proxies Linq Partner API v3)
 import { chatSendVoicememoParamsSchema } from "@/lib/schemas/linq/params/chat-send-voicememo-params";
 import { chatSendVoicememoResponseSchema } from "@/lib/schemas/linq/responses/chat-responses";
 import { handleChatsSendVoicememo } from "./_shared/handlers";

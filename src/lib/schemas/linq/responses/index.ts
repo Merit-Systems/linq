@@ -48,12 +48,6 @@ export {
   type ParticipantRemoveResponse,
 } from "./participant-responses";
 export {
-  paymentRequestListResponseSchema,
-  paymentRequestSchema,
-  type PaymentRequest,
-  type PaymentRequestListResponse,
-} from "./payment-request-responses";
-export {
   phoneNumberListResponseSchema,
   phoneNumberUpdateResponseSchema,
   phonenumberListResponseSchema,

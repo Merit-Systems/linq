@@ -117,22 +117,47 @@ const EXPECTED_SDK_METHODS: Array<{
   { method: "client.contactCard.update", routeImportSuffix: "contact-card/update" },
 ];
 
-/** REST-only endpoints not yet in @linqapp/sdk@0.28.2 */
-const EXPECTED_REST_GAP_METHODS: Array<{
-  method: string;
-  routeImportSuffix: string;
-}> = [
-  { method: "POST /v3/payment_requests", routeImportSuffix: "payment-requests/create" },
-  { method: "GET /v3/payment_requests", routeImportSuffix: "payment-requests/list" },
-  {
-    method: "GET /v3/payment_requests/{id}",
-    routeImportSuffix: "payment-requests/retrieve",
-  },
-  {
-    method: "POST /v3/payment_requests/{id}/cancel",
-    routeImportSuffix: "payment-requests/cancel",
-  },
-];
+/** Chat create + mutators — not exposed to agents (use POST /messages for cold start). */
+const EXCLUDED_AGENT_WRITE_ROUTES = new Set([
+  "chats/create",
+  "chats/update",
+  "chats/mark-as-read",
+  "chats/leave",
+  "chats/share-contact-card",
+  "chats/participants/add",
+  "chats/participants/remove",
+  "chats/typing/start",
+  "chats/typing/stop",
+  "chats/location/request",
+]);
+
+/** Ops-only line config — SIWX allowlisted wallet, not general agent API. */
+const EXCLUDED_OPS_ROUTES = new Set([
+  "contact-card/create",
+  "contact-card/update",
+  "phone-numbers/update",
+  "available-number/retrieve",
+  "webhook-subscriptions/create",
+  "webhook-subscriptions/update",
+  "webhook-subscriptions/delete",
+]);
+
+/** SIWX Linq read proxies — intentionally excluded from agent API (shared-line isolation). */
+const EXCLUDED_SIWX_READ_ROUTES = new Set([
+  "chats/list",
+  "chats/retrieve",
+  "chats/messages/list",
+  "chats/location/retrieve",
+  "messages/retrieve",
+  "messages/list-thread",
+  "attachments/retrieve",
+  "contact-card/retrieve",
+  "phone-numbers/list",
+  "phonenumbers/list",
+  "webhook-events/list",
+  "webhook-subscriptions/list",
+  "webhook-subscriptions/retrieve",
+]);
 
 function suffixToHandlerName(suffix: string): string {
   return `handle${suffix
@@ -144,11 +169,16 @@ function suffixToHandlerName(suffix: string): string {
 }
 
 function readRegistry(): string {
-  const registryPath = join(ROOT, "src/lib/routes.registry.ts");
-  if (!existsSync(registryPath)) {
-    return "";
-  }
-  return readFileSync(registryPath, "utf8");
+  const files = [
+    join(ROOT, "src/lib/routes.registry.ts"),
+    join(ROOT, "src/lib/routes.linq.registry.ts"),
+    join(ROOT, "src/lib/routes.stablelinq.registry.ts"),
+    join(ROOT, "src/lib/routes.stablelinq-ops.registry.ts"),
+  ];
+  return files
+    .filter((p) => existsSync(p))
+    .map((p) => readFileSync(p, "utf8"))
+    .join("\n");
 }
 
 function findHandlerFiles(dir: string, acc: string[] = []): string[] {
@@ -181,8 +211,11 @@ function main(): void {
   const registryImports = extractRegistryImports(registry);
   const handlersSource = readAllHandlersSource();
 
-  const allExpected = [...EXPECTED_SDK_METHODS, ...EXPECTED_REST_GAP_METHODS];
+  const allExpected = EXPECTED_SDK_METHODS;
   const missing = allExpected.filter(({ routeImportSuffix }) => {
+    if (EXCLUDED_SIWX_READ_ROUTES.has(routeImportSuffix)) return false;
+    if (EXCLUDED_AGENT_WRITE_ROUTES.has(routeImportSuffix)) return false;
+    if (EXCLUDED_OPS_ROUTES.has(routeImportSuffix)) return false;
     const handler = suffixToHandlerName(routeImportSuffix);
     return !handlersSource.includes(`function ${handler}(`);
   });
@@ -190,8 +223,14 @@ function main(): void {
   console.log("StableLinq SDK coverage audit");
   console.log("=============================");
   console.log(`Expected SDK methods: ${EXPECTED_SDK_METHODS.length}`);
-  console.log(`Expected REST gap endpoints: ${EXPECTED_REST_GAP_METHODS.length}`);
   console.log(`Registry imports: ${registryImports.size}`);
+  console.log(
+    `Excluded SIWX Linq reads (wallet isolation): ${EXCLUDED_SIWX_READ_ROUTES.size}`,
+  );
+  console.log(
+    `Excluded chat mutators (shared line): ${EXCLUDED_AGENT_WRITE_ROUTES.size}`,
+  );
+  console.log(`Excluded ops routes (allowlisted wallet): ${EXCLUDED_OPS_ROUTES.size}`);
 
   for (const discoveryFile of [
     "src/app/openapi.json/route.ts",
@@ -214,7 +253,7 @@ function main(): void {
     return;
   }
 
-  console.log("\nAll expected SDK methods and REST gap endpoints are registered.");
+  console.log("\nAll expected SDK methods are registered.");
 }
 
 main();

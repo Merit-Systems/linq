@@ -1,3 +1,4 @@
+// StableLinq backend: linq-write (proxies Linq Partner API v3)
 import { FLAT_PRICE_USD_STRING } from "@/lib/pricing";
 import { capabilityCheckIMessageParamsSchema } from "@/lib/schemas/linq/params/capability-check-imessage-params";
 import { handleCapabilityCheckImessage } from "./_shared/handlers";

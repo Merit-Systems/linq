@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildPhoneStatusDiscordEmbed,
   extractPhoneStatusChanges,
+  phoneStatusAlertHeading,
 } from "@/lib/webhooks/linq/phone-number-status";
 
 describe("phone number status changes", () => {
@@ -46,7 +47,7 @@ describe("phone number status changes", () => {
     expect(changes?.reputationChanged).toBe(true);
   });
 
-  it("builds embed with changed fields only", () => {
+  it("builds compact embed with formatted date and no footer", () => {
     const changes = extractPhoneStatusChanges({
       ...base,
       previous_status: "ACTIVE",
@@ -55,12 +56,16 @@ describe("phone number status changes", () => {
       new_reputation: "CRITICAL",
     });
     expect(changes).not.toBeNull();
+    expect(phoneStatusAlertHeading(changes!)).toBe("StableLinq line alert");
     const embed = buildPhoneStatusDiscordEmbed(changes!);
-    expect(embed.title).toContain("alert");
     expect(embed.color).toBe(0xed_42_43);
-    const names = embed.fields.map((f) => f.name);
-    expect(names).toContain("Status");
-    expect(names).toContain("Reputation");
+    expect(embed.description).toContain("+12052438809");
+    expect(embed.description).toContain("Status **ACTIVE → FLAGGED**");
+    expect(embed.description).toContain("Reputation **HEALTHY → CRITICAL**");
+    expect(embed.description).toContain("Feb 18, 2026");
+    expect(embed).not.toHaveProperty("title");
+    expect(embed).not.toHaveProperty("footer");
+    expect(embed).not.toHaveProperty("fields");
   });
 });
 

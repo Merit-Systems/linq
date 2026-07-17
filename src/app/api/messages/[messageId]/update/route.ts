@@ -1,3 +1,4 @@
+// StableLinq backend: linq-write (proxies Linq Partner API v3)
 import { FLAT_PRICE_USD_STRING } from "@/lib/pricing";
 import { handleMessagesUpdateAppCard } from "./_shared/handlers";
 import { messageUpdateAppCardParamsSchema } from "@/lib/schemas/linq/params/message-update-app-card-params";
