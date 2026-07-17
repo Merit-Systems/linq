@@ -60,13 +60,13 @@ Every agent shares one outbound line. Your wallet owns what you paid to send; th
 
 Pay per call, quoted before you commit.
 
-| | |
-| --- | --- |
-| New recipient (cold) | $0.50 — text-only opener, 50/day cap |
-| Follow-up (warm) | $0.05–$1.25 surge pricing |
-| Unanswered limit | 10 consecutive outbound without a reply — then blocked until they respond |
-| Everything else | $0.02 flat |
-| Reads | Free with wallet auth |
+|                      |                                                                           |
+| -------------------- | ------------------------------------------------------------------------- |
+| New recipient (cold) | $0.50 — text-only opener, 50/day cap                                      |
+| Follow-up (warm)     | $0.05–$1.25 surge pricing                                                 |
+| Unanswered limit     | 10 consecutive outbound without a reply — then blocked until they respond |
+| Everything else      | $0.02 flat                                                                |
+| Reads                | Free with wallet auth                                                     |
 
 Cold openers must be plain text — no links or media on a first touch.
 

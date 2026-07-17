@@ -2,7 +2,10 @@
 import { handleMessagesCreate } from "./_shared/handlers";
 import { messageCreateParamsSchema } from "@/lib/schemas/linq/params/message-create-params";
 import { messageCreateResponseSchema } from "@/lib/schemas/linq/responses/message-responses";
-import { quoteMessageSendPrice, maxMessageSendPrice } from "@/lib/routing/_shared/message-pricing";
+import {
+  quoteMessageSendPrice,
+  maxMessageSendPrice,
+} from "@/lib/routing/_shared/message-pricing";
 import { validateColdOutbound } from "@/lib/routing/_shared/first-message-validate";
 import { assertUnansweredOutboundAllowed } from "@/lib/routing/_shared/unanswered-outbound-validate";
 import { router, paidOpts } from "@/lib/router";
@@ -11,7 +14,10 @@ export const POST = router
   .route("messages-create")
   .path("messages")
   .method("POST")
-  .paid((body) => quoteMessageSendPrice("messages/create", body), { ...paidOpts(), maxPrice: maxMessageSendPrice() })
+  .paid((body) => quoteMessageSendPrice("messages/create", body), {
+    ...paidOpts(),
+    maxPrice: maxMessageSendPrice(),
+  })
   .body(messageCreateParamsSchema)
   .validate(async (body) => {
     await validateColdOutbound("messages/create", { body });
