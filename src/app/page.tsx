@@ -40,7 +40,8 @@ export default function HomePage() {
       </ul>
       <p className="text-sm text-neutral-500">
         Cold outbound to new recipients: $0.50/recipient (50/day cap), text-only
-        opener. Warm follow-ups use surge pricing ($0.05–$1.25). All messages
+        opener; cold-only sends pay max(cold fee, surge slot price). Warm
+        follow-ups use surge pricing ($0.05–$1.25). All messages
         send from +12052438809 — not configurable via the API.
       </p>
     </main>

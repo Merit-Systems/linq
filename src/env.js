@@ -16,12 +16,6 @@ export const env = createEnv({
     BASE_URL: appUrlSchema,
     LINQ_API_KEY: z.string().min(1),
     PAYEE_ADDRESS: z.string().min(1),
-    SOLANA_PAYEE_ADDRESS: z.string().optional(),
-    SOLANA_FACILITATOR_URL: z
-      .string()
-      .url()
-      .optional()
-      .default("https://facilitator.payai.network"),
     CDP_API_KEY_ID: z.string().min(1),
     CDP_API_KEY_SECRET: z.string().min(1),
     MPP_SECRET_KEY: z.string().optional(),
@@ -54,8 +48,6 @@ export const env = createEnv({
     BASE_URL: process.env.BASE_URL,
     LINQ_API_KEY: process.env.LINQ_API_KEY,
     PAYEE_ADDRESS: process.env.PAYEE_ADDRESS,
-    SOLANA_PAYEE_ADDRESS: process.env.SOLANA_PAYEE_ADDRESS,
-    SOLANA_FACILITATOR_URL: process.env.SOLANA_FACILITATOR_URL,
     CDP_API_KEY_ID: process.env.CDP_API_KEY_ID,
     CDP_API_KEY_SECRET: process.env.CDP_API_KEY_SECRET,
     MPP_SECRET_KEY: process.env.MPP_SECRET_KEY,

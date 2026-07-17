@@ -19,6 +19,15 @@ export const STABLELINQ_DB_ROUTES = [
   },
 ] as const;
 
+export const LINQ_READ_ROUTES = [
+  {
+    method: "GET",
+    path: "account/chats/{chatId}/messages",
+    slug: "account/chats/messages/list",
+    backend: "linq-read",
+  },
+] as const;
+
 export const STABLELINQ_WEBHOOK_ROUTES = [
   {
     method: "POST",
@@ -30,6 +39,7 @@ export const STABLELINQ_WEBHOOK_ROUTES = [
 
 export type RouteBackend =
   | "linq-write"
+  | "linq-read"
   | "stablelinq-db"
   | "stablelinq-ops"
   | "stablelinq-webhook";

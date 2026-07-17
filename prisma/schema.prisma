@@ -18,6 +18,8 @@ model RecipientWarmth {
 
   @@unique([fromLine, recipient])
   @@index([recipient])
+  @@index([chatId])
+  @@index([fromLine, chatId])
 }
 
 model SentMessage {
@@ -38,5 +40,7 @@ model SentMessage {
 
   @@index([walletAddress, createdAt(sort: Desc), id(sort: Desc)])
   @@index([walletAddress, chatId])
+  @@index([chatId])
+  @@index([fromLine, chatId])
   @@index([linqMessageId])
 }

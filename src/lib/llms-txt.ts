@@ -2,15 +2,16 @@ export const LLMS_TXT = `# StableLinq — Linq Partner API v3 (multi-agent, shar
 
 ## Authentication
 
-- **Paid sends / actions:** micropayment via x402 or MPP (USDC on Base, Solana, or Tempo).
+- **Paid sends / actions:** micropayment via x402 or MPP (USDC on Base or Tempo).
 - **Reads:** SIWX wallet proof only — free, no API keys, no accounts.
-- **Identity = wallet address.** You only see messages **you paid to send**. Other agents on the shared line are invisible to you.
+- **Ledger identity = wallet address.** \`GET /account/sent-messages\` and \`GET /account/chats\` show only messages **you paid to send**.
+- **Thread reads:** \`GET /account/chats/{chatId}/messages\` returns the full conversation on a StableLinq-known chat (inbound replies + all outbound on the shared line).
 
 ## Base URL
 
 https://stablelinq.dev
 
-StableLinq proxies **Linq Partner API v3** for **writes** (\`https://api.linqapp.com/api/partner/v3\`). **Reads** come from StableLinq's Postgres ledger (\`GET /api/account/*\`), not raw Linq list endpoints.
+StableLinq proxies **Linq Partner API v3** for **writes** (\`https://api.linqapp.com/api/partner/v3\`). **Ledger reads** come from Postgres (\`GET /api/account/sent-messages\`, \`GET /api/account/chats\`). **Thread reads** proxy Linq message history for StableLinq-known chats (\`GET /api/account/chats/{chatId}/messages\`).
 
 ## Shared line model
 
@@ -18,6 +19,7 @@ StableLinq proxies **Linq Partner API v3** for **writes** (\`https://api.linqapp
 
 - **Sends:** any paying wallet; attribution stored in \`SentMessage\`.
 - **Follow-ups:** any agent may \`POST /api/chats/{chatId}/messages\` if they know the \`chatId\` (no chat ownership gate).
+- **Thread reads:** any SIWX agent may \`GET /api/account/chats/{chatId}/messages\` for a \`chatId\` StableLinq created on the line — includes recipient replies and **all agents' outbound** in that chat.
 - **Delete / edit / react:** only on **your** messages (\`linqMessageId\` you paid to send).
 - **Warmth + daily caps:** **line-wide** — cold/warm is per \`(fromLine, recipient)\`; 50 cold / 6k surge caps are shared across all agents.
 - **Recipients:** multiple agents may text the same recipient (one thread on their phone).
@@ -41,8 +43,10 @@ All endpoints support \`check_endpoint_schema\`. Use it on the selected endpoint
 1. Optional: \`POST /api/capability/check-imessage\` or \`check-rcs\` ($0.02 flat each) when channel matters.
 2. \`POST /api/messages\` — send to recipient(s). See **POST /api/messages** below for pricing, channel fallback, and cold/warm rules.
 3. \`GET /api/account/sent-messages\` (SIWX) — list **your** sends; note \`chat_id\` for follow-ups.
-4. \`GET /api/account/chats\` (SIWX) — chat summaries from **your** sends only.
-5. \`POST /api/chats/{chatId}/messages\` — follow-ups when you already have a \`chat_id\` (warm surge pricing).
+4. \`GET /api/account/chats/{chatId}/messages\` (SIWX) — poll full thread for inbound replies (\`cursor\`, \`limit\`).
+5. \`GET /api/account/chats\` (SIWX) — chat summaries from **your** sends only.
+6. \`POST /api/chats/{chatId}/messages\` — follow-ups when you already have a \`chat_id\` (warm surge pricing)
+7. Optional: \`POST /api/chats/{chatId}/voicememo\` — send an iMessage voice memo to an existing chat (warm surge pricing).
 
 Example send:
 
@@ -53,7 +57,7 @@ Example send:
 }
 \`\`\`
 
-Response includes \`chat_id\` and \`service\` — save \`chat_id\` for step 5.
+Response includes \`chat_id\` and \`service\` — save \`chat_id\` for thread reads and follow-ups (steps 4–7).
 
 ## POST /api/messages
 
@@ -71,17 +75,20 @@ StableLinq sends on **iMessage first**, falls back to **RCS**, then **SMS** (bes
 
 - **Cold** = recipient new to shared line \`+12052438809\` (line-wide warmth, not per wallet)
 - **Warm** = line has contacted this recipient before
-- Cold sends cost **more** than warm; exact amount from the **402 quote only** — do not compute manually
+- Exact amount from the **402 quote only** — do not compute manually
 - **Cold opener validation:** plain text only — enforced **pre-payment** (**422**, no charge). Media/links/URLs on a cold opener return 422 with a message naming the cold recipient(s) and how to fix it
-- **Mixed \`to[]\`:** cold fee per new recipient + warm surge component when applicable
 
 ### Pricing
 
+All send prices come from the **402 quote** — do not compute manually.
+
 - **Cold outbound-first:** $0.50/recipient, **50 new recipients/day** line-wide cap
-- **Warm surge:** $0.05–$1.25, **6,000 messages/day** line-wide cap
-- **Cold-only send** (all recipients new): cold fee only, no surge on top
+- **Warm surge:** $0.05–$1.25 per message slot, **6,000 messages/day** line-wide cap
+- **Cold-only** (all recipients new): \`max($0.50 × recipients, surge slot price)\` — never cheaper than warm at the same slot
+- **Warm-only** (all recipients warm, or follow-up in existing chat): surge slot price only
+- **Mixed \`to[]\`:** \`($0.50 × cold recipients) + surge slot price\`
 - **Cap exhaustion:** **503** + \`retryAfter\` (seconds until UTC midnight)
-- **Non-message paid calls:** $0.02 flat
+- **Non-message paid calls:** $0.02 flat (capability checks, attachment upload/delete, message edit/delete/react)
 
 ### Request / response
 
@@ -92,21 +99,22 @@ StableLinq sends on **iMessage first**, falls back to **RCS**, then **SMS** (bes
 
 All messages send from **+12052438809**. This is **not in the API** — do not ask users for a phone number or pass \`from\`. Daily caps and recipient warmth are **line-wide** (shared across all agents).
 
-## Reads (wallet-scoped only)
+## Reads
 
-Do **not** use Linq list/retrieve routes — they are not exposed to agents.
+Two read modes — do not confuse them:
 
 | Route | Auth | Returns |
 |-------|------|---------|
 | \`GET /api/account/sent-messages\` | SIWX | Paginated messages **you paid to send** (\`cursor\`, \`limit\`, optional \`chatId\`) |
 | \`GET /api/account/sent-messages/{id}\` | SIWX | One sent message (404 if not yours) |
 | \`GET /api/account/chats\` | SIWX | Chats derived from **your** sends |
+| \`GET /api/account/chats/{chatId}/messages\` | SIWX | Full Linq thread for a StableLinq-known chat — inbound replies + all line outbound (\`cursor\`, \`limit\`) |
 
-Inbound replies from recipients are not readable yet — only your outbound history.
+\`GET /api/account/chats/{chatId}/messages\` requires a \`chat_id\` from a prior send (or another agent's send on the line). Unknown \`chatId\` → **404**. Thread includes other agents' outbound on the shared line, not just yours.
 
 ## Own-message mutators
 
-Requires SIWX/payment wallet + a \`SentMessage\` row for that \`linqMessageId\`:
+Requires payment wallet + a \`SentMessage\` row for that \`linqMessageId\`. **$0.02 flat** each:
 
 - \`DELETE /api/messages/{messageId}\`
 - \`PATCH /api/messages/{messageId}\`
@@ -125,11 +133,14 @@ Line configuration routes require SIWX from the **ops allowlisted wallet** (\`ST
 
 ## Key agent endpoints
 
-- \`POST /api/messages\` — send on iMessage → RCS → SMS; cold costs more than warm (see above)
-- \`POST /api/chats/{chatId}/messages\` — warm follow-up in existing chat
+- \`POST /api/messages\` — send on iMessage → RCS → SMS; see **POST /api/messages** for cold/warm pricing
+- \`POST /api/chats/{chatId}/messages\` — warm follow-up in existing chat (surge pricing)
+- \`POST /api/chats/{chatId}/voicememo\` — iMessage voice memo in existing chat (surge pricing)
 - \`GET /api/account/sent-messages\` — your send history (SIWX)
 - \`GET /api/account/chats\` — your chats (SIWX)
+- \`GET /api/account/chats/{chatId}/messages\` — full thread incl. inbound replies (SIWX)
 - \`POST /api/attachments\` — optional pre-upload for >10MB, reuse, or latency ($0.02)
+- \`DELETE /api/attachments/{attachmentId}\` — remove unused pre-upload ($0.02)
 
 ## Attachments / media
 

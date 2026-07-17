@@ -14,13 +14,7 @@ function resolveBaseUrl(): string {
 const payeeAddress =
   env.PAYEE_ADDRESS || "0x0000000000000000000000000000000000000001";
 
-const SOLANA_MAINNET = "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp";
-const x402Accepts = [
-  { network: "eip155:8453", payTo: payeeAddress },
-  ...(env.SOLANA_PAYEE_ADDRESS
-    ? [{ network: SOLANA_MAINNET, payTo: env.SOLANA_PAYEE_ADDRESS }]
-    : []),
-];
+const x402Accepts = [{ network: "eip155:8453", payTo: payeeAddress }];
 
 if (!process.env.NEXT_PUBLIC_BASE_URL) {
   const host =
@@ -55,9 +49,6 @@ export const router = createRouter({
   baseUrl: resolveBaseUrl(),
   protocols,
   x402: {
-    ...(env.SOLANA_FACILITATOR_URL && {
-      facilitators: { solana: env.SOLANA_FACILITATOR_URL },
-    }),
     accepts: x402Accepts,
   },
   discovery: {

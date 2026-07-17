@@ -107,18 +107,21 @@ export async function quoteMessageSendPrice(
     });
   }
 
-  let total = classified.cold.length * FIRST_OUTBOUND_PRICE_USD;
-
-  if (classified.warm.length > 0 || classified.cold.length === 0) {
-    const surgePrice = getMessagePriceUsd(slotNumber);
-    if (!surgePrice) {
-      throw Object.assign(new Error(MESSAGE_EXHAUSTED), {
-        status: 503,
-        retryAfter,
-      });
-    }
-    total += Number(surgePrice);
+  const coldTotal = classified.cold.length * FIRST_OUTBOUND_PRICE_USD;
+  const surgePrice = getMessagePriceUsd(slotNumber);
+  if (!surgePrice) {
+    throw Object.assign(new Error(MESSAGE_EXHAUSTED), {
+      status: 503,
+      retryAfter,
+    });
   }
+
+  const surge = Number(surgePrice);
+  const coldOnly =
+    classified.cold.length > 0 && classified.warm.length === 0;
+  const total = coldOnly
+    ? Math.max(coldTotal, surge)
+    : coldTotal + surge;
 
   return formatUsd(total);
 }

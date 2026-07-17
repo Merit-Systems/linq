@@ -2,7 +2,7 @@
 
 iMessage, RCS, and SMS for agents — full [Linq Partner API v3](https://linqapp.com) behind [x402](https://x402.org) and MPP micropayments.
 
-Pay with USDC on Base, Solana, or Tempo. No API keys. No accounts.
+Pay with USDC on Base or Tempo. No API keys. No accounts.
 
 ## Stack
 
@@ -40,21 +40,22 @@ See [stablelinq.dev/llms.txt](https://stablelinq.dev/llms.txt) for agent guidanc
 
 ## Pricing
 
-- **Cold outbound-first** (new recipient): **$0.50/recipient**, **50 new recipients/day** global cap — text-only opener required
+- **Cold outbound-first** (new recipient): **$0.50/recipient**, **50 new recipients/day** global cap — text-only opener required; cold-only sends pay `max($0.50/recipient, surge slot price)` so they are never cheaper than warm at the same slot
 - **Warm follow-ups** (existing chat or warm pair): surge **$0.05–$1.25**, **6000/day** UTC cap
 - **All other paid endpoints**: **$0.02** flat
-- **Reads**: free with SIWX — **wallet-scoped only** via `GET /api/account/*` (not raw Linq list endpoints)
+- **Reads**: free with SIWX — ledger via `GET /api/account/sent-messages` and `GET /api/account/chats` (wallet-scoped); thread history via `GET /api/account/chats/{chatId}/messages` (line-known chats)
 
 ## Route backends
 
 | Backend | Routes | Auth |
 |---------|--------|------|
 | `linq-write` | Paid Linq proxies (send, own-message mutators, …) | x402 / MPP |
+| `linq-read` | `GET /account/chats/{chatId}/messages` (thread history) | SIWX |
 | `stablelinq-db` | `GET /account/sent-messages`, `GET /account/chats`, … | SIWX |
 | `stablelinq-ops` | Line config (contact card, webhooks, phone settings) | SIWX (ops wallet only) |
 | `stablelinq-webhook` | `POST /webhooks/linq` (line status → Discord) | HMAC |
 
-All agents share one outbound line (**+12052438809**). SIWX reads return **only messages the authenticated wallet paid to send**. Warmth and daily caps are **line-wide** (shared across agents). Chat-level mutators (rename, read receipts, typing, participants) are not exposed — multiple agents may send in the same chat and to the same recipient.
+All agents share one outbound line (**+12052438809**). Ledger reads return **only messages the authenticated wallet paid to send**. Thread reads return the full conversation on a StableLinq-known chat (inbound + all line outbound). Warmth and daily caps are **line-wide** (shared across agents). Chat-level mutators (rename, read receipts, typing, participants) are not exposed — multiple agents may send in the same chat and to the same recipient.
 
 ## First-message rule
 
@@ -83,7 +84,6 @@ npm run ensure:webhook
    | `LINQ_WEBHOOK_SECRET` | Linq webhook signing secret |
    | `DISCORD_WEBHOOK_URL` | Discord incoming webhook for line alerts |
    | `PAYEE_ADDRESS` | Fresh EVM recipient (never reuse) |
-   | `SOLANA_PAYEE_ADDRESS` | Fresh Solana recipient |
    | `CDP_API_KEY_ID` / `CDP_API_KEY_SECRET` | Copy from stabledomains |
    | `MPP_SECRET_KEY` | Fresh: `openssl rand -base64 32` |
    | `MPP_CURRENCY` | Tempo USDC `0x20c000000000000000000000b9537d11c60e8b50` |
