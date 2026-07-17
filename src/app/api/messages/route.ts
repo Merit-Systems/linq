@@ -28,6 +28,6 @@ export const POST = router
   })
   .output(messageCreateResponseSchema)
   .description(
-    "Linq Messages — Send on iMessage, fallback to RCS then SMS. Reuses existing chats. Required: call POST /api/messages/warmth before stating cold/warm to the user. Quote send cost only from the 402 (checkout_session.quoted_price_usd); maxPrice is an authorization ceiling, not the send cost. Cold openers must be text-only. See discovery guidance for pricing, media, and overrides.",
+    "Linq Messages — Send on iMessage, fallback to RCS then SMS. Reuses existing chats. Required: call POST /api/messages/warmth before stating cold/warm or quoting send cost (returns quoted_price_usd). Pay only the quoted amount on send; maxPrice is an authorization ceiling, not the send cost. Cold openers must be text-only. See discovery guidance for pricing, media, and overrides.",
   )
   .handler(handleMessagesCreate);

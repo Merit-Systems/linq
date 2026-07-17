@@ -16,8 +16,19 @@ export const warmthCheckResultSchema = z.object({
   send_blocked: z.boolean(),
 });
 
+export const messageSendPricingBreakdownSchema = z.object({
+  cold_recipients: z.number().int().min(0),
+  warm_recipients: z.number().int().min(0),
+  cold_first_usd: z.string(),
+  surge_slot_usd: z.string(),
+  surge_slot_number: z.number().int().min(1),
+});
+
 export const warmthCheckResponseSchema = z.object({
   from_line: e164PhoneSchema,
+  quoted_price_usd: z.string(),
+  pricing_breakdown: messageSendPricingBreakdownSchema,
+  pricing_note: z.string(),
   results: z.array(warmthCheckResultSchema),
 });
 

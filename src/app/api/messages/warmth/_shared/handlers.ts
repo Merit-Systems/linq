@@ -6,6 +6,7 @@ import {
   reconcileUnansweredOutbound,
   shouldReconcileUnansweredOutbound,
 } from "@/lib/routing/_shared/unanswered-outbound-reconcile";
+import { quoteMessageSendBreakdown } from "@/lib/routing/_shared/message-pricing";
 import {
   isSendBlocked,
   type WarmthCheckParams,
@@ -59,8 +60,14 @@ export async function handleMessagesWarmthCheck(ctx: {
     }),
   );
 
+  const quote = await quoteMessageSendBreakdown("messages/create", { to });
+
   return NextResponse.json({
     from_line: ASSIGNED_FROM_LINE,
+    quoted_price_usd: quote.quoted_price_usd,
+    pricing_breakdown: quote.pricing_breakdown,
+    pricing_note:
+      "quoted_price_usd is the exact POST /api/messages cost for this to[] (one surge slot per request, not per warm recipient). Pay only this amount on send.",
     results,
   });
 }

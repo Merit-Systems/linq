@@ -9,8 +9,8 @@ export const LLMS_TXT = `# StableLinq — Linq Partner API v3 (multi-agent, shar
 
 ## Agent rules (mandatory)
 
-- **Warmth:** Never tell the user a recipient is cold or warm until you call \`POST /api/messages/warmth\` (free SIWX) with the exact \`to[]\` you plan to send. Do not infer from memory, user claims, or absence of a local \`chat_id\`. Warmth is line-wide on **+12052438809** — another agent may have already contacted this recipient.
-- **Price:** Never quote a send cost to the user until you have the **402 quoted price** for the exact request body. Probe with \`check_endpoint_schema\` (sample body, no payment) or an unpaid \`POST /api/messages\` 402. Do not warn the user about cost before probing.
+- **Warmth + price:** Never tell the user cold/warm or send cost until you call \`POST /api/messages/warmth\` (free SIWX) with the exact \`to[]\` you plan to send. Read \`quoted_price_usd\` and per-recipient \`warmth\` from the response. Do not infer from memory, user claims, or absence of a local \`chat_id\`. Warmth is line-wide on **+12052438809** — another agent may have already contacted this recipient.
+- **Price:** Quote send cost only from \`POST /api/messages/warmth\` → \`quoted_price_usd\` for the exact \`to[]\`. Do not use \`check_endpoint_schema\` for pricing — it only shows authorization ceilings for dynamic routes. On send, pay only that quoted amount (402 \`checkout_session.quoted_price_usd\` should match).
 - **Forbidden:** Do not cite \`maxPrice\`, per-request bounds ($0.05–$26.25), or pricing formulas as the send cost. Those are **authorization ceilings**, not quotes.
 - **Typical single-recipient costs (reference only — not for user-facing quotes):** warm ≈ $0.05–$1.25; cold minimum $0.50.
 
@@ -56,13 +56,13 @@ For messaging tasks, follow **Messaging happy path** rules below even when using
 
 ## Schema Discovery
 
-All endpoints support \`check_endpoint_schema\`. Use it on the selected endpoint to confirm request schema and pricing before execution.
+All endpoints support \`check_endpoint_schema\`. Use it to confirm **request/response shape and auth mode** — not send cost. Dynamic routes (e.g. \`POST /api/messages\`) expose only min/max authorization bounds in discovery; the exact send price comes from \`POST /api/messages/warmth\` → \`quoted_price_usd\`.
 
 ## Messaging happy path
 
-1. **Required:** \`POST /api/messages/warmth\` (free SIWX) with the exact \`to[]\` — before any send **or** before telling the user cold/warm status.
-2. **Required before quoting cost:** probe the 402 quote (\`check_endpoint_schema\` with sample body, or unpaid \`POST /api/messages\`) — read \`checkout_session.quoted_price_usd\` or the x402 amount; tell the user only that amount.
-3. \`POST /api/messages\` — send to recipient(s); pay the quoted 402 amount only. See **POST /api/messages** below for pricing, channel fallback, and cold/warm rules.
+1. **Required:** \`POST /api/messages/warmth\` (free SIWX) with the exact \`to[]\` — before any send **or** before telling the user cold/warm status **or** send cost. Read \`quoted_price_usd\`, \`pricing_breakdown\`, and per-recipient \`warmth\` / \`send_blocked\`.
+2. Tell the user the exact \`quoted_price_usd\` (and cold/warm if relevant). One \`POST /api/messages\` with multiple warm recipients in \`to[]\` is **one surge charge**, not per recipient.
+3. \`POST /api/messages\` — send to recipient(s); pay the quoted amount only. See **POST /api/messages** below for pricing, channel fallback, and cold/warm rules.
 4. Optional: \`POST /api/capability/check-imessage\` or \`check-rcs\` ($0.02 flat each) when channel matters.
 5. \`GET /api/account/sent-messages\` (SIWX) — list **your** sends; note \`chat_id\` for follow-ups (\`chat_id\` is line-shared — not your private chat).
 6. \`GET /api/account/chats/{chatId}/messages\` (SIWX) — poll full thread for inbound replies (\`cursor\`, \`limit\`).
@@ -92,42 +92,38 @@ StableLinq sends on **iMessage first**, falls back to **RCS**, then **SMS** (bes
 - Optional override: \`message.preferred_service\` (\`iMessage\` | \`RCS\` | \`SMS\`)
 - After send, read top-level \`service\` and \`handles[].service\` in the 200 response
 - Optional pre-checks: \`POST /api/capability/check-imessage\`, \`POST /api/capability/check-rcs\` ($0.02 each, Linq proxy)
-- Warmth pre-check: \`POST /api/messages/warmth\` (free SIWX) — body \`{ to: ["+1..."] }\` returns \`warmth\` per recipient (\`cold\` | \`warm\`), \`chat_id\` when warm, \`consecutive_unanswered_outbound\`, and \`send_blocked\` when the 10-message streak is exhausted
+- Warmth + quote: \`POST /api/messages/warmth\` (free SIWX) — body \`{ to: ["+1..."] }\` returns \`quoted_price_usd\`, \`pricing_breakdown\`, \`warmth\` per recipient (\`cold\` | \`warm\`), \`chat_id\` when warm, \`consecutive_unanswered_outbound\`, and \`send_blocked\` when the 10-message streak is exhausted
 
 ### Cold vs warm
 
 - **Cold** = recipient new to shared line \`+12052438809\` (line-wide warmth, not per wallet)
 - **Warm** = line has contacted this recipient before
-- **Required** pre-check before stating cold/warm: \`POST /api/messages/warmth\` (free SIWX)
-- Exact amount from the **402 quote only** — do not compute manually; do not warn the user about cost before probing
+- **Required** pre-check before stating cold/warm or quoting cost: \`POST /api/messages/warmth\` (free SIWX) → \`quoted_price_usd\`
+- Exact amount from \`quoted_price_usd\` on warmth (or matching 402 on send) — do not compute manually
 - **Cold opener validation:** plain text only — enforced **pre-payment** (**422**, no charge). Media/links/URLs on a cold opener return 422 with a message naming the cold recipient(s) and how to fix it
 - **Unanswered limit:** if a warm recipient has **10 consecutive outbound messages without replying**, the next send returns **422** (line-wide, pre-payment). Replying resets the streak. If blocked but the recipient has replied and the webhook was missed, the next send or warmth check reconciles from the Linq thread before rejecting. Pre-check via \`POST /api/messages/warmth\` (\`send_blocked\`, \`consecutive_unanswered_outbound\`)
 
 ### Pricing
 
-All send prices come from the **402 quote** — do not compute manually. Do not warn the user about cost before probing.
+All send prices come from \`POST /api/messages/warmth\` → \`quoted_price_usd\` for the exact \`to[]\` — do not compute manually. \`check_endpoint_schema\` does not return per-request quotes.
 
 - **Cold outbound-first:** $0.50/recipient, **50 new recipients/day** line-wide cap
 - **Warm surge:** $0.05–$1.25 per message slot, **6,000 messages/day** line-wide cap
 - **Cold-only** (all recipients new): \`max($0.50 × recipients, surge slot price)\` — never cheaper than warm at the same slot
 - **Warm-only** (all recipients warm, or follow-up in existing chat): surge slot price only
 - **Mixed \`to[]\`:** \`($0.50 × cold recipients) + surge slot price\`
-- **Authorization ceiling (NOT quoted price):** x402 \`maxPrice\` is the wallet authorization cap, not what you pay. The only user-facing send cost is the decimal in the 402 challenge (\`checkout_session.quoted_price_usd\` on \`POST /api/messages\`, or the x402 amount field).
+- **Authorization ceiling (NOT quoted price):** x402 \`maxPrice\` is the wallet authorization cap, not what you pay. The user-facing send cost is \`quoted_price_usd\` from \`POST /api/messages/warmth\` (or the matching 402 \`checkout_session.quoted_price_usd\` on send).
   - \`POST /api/messages\` \`maxPrice\`: **$26.25** — ceiling for worst-case batch (\`50 × $0.50 + $1.25\` max surge); a single warm send is typically **$0.05–$1.25**, a single cold send is at least **$0.50**
   - Cold-only same request ceiling: up to **$25.00** (\`max(50 × $0.50, surge)\`)
   - \`POST /api/chats/{chatId}/messages\` and \`/voicememo\`: **$0.05–$1.25** surge ceiling (quoted price is in the 402)
 - **Cap exhaustion:** **503** + \`retryAfter\` (seconds until UTC midnight)
 - **Non-message paid calls:** $0.02 flat (Linq capability checks, attachment upload/delete, message edit/delete/react)
-- **Warmth pre-check:** \`POST /api/messages/warmth\` — free SIWX (Postgres read)
+- **Warmth + quote:** \`POST /api/messages/warmth\` — free SIWX; same \`to[]\` shape as send. Returns \`quoted_price_usd\`, \`pricing_breakdown\`, line-wide cold/warm per recipient, \`chat_id\` when warm, \`consecutive_unanswered_outbound\`, and \`send_blocked\`. Returned \`chat_id\` is a line reference, not wallet-owned — any agent may follow up.
 
 ### Request / response
 
 - Body: \`{ to: string[], message: { parts: [...] } }\`
 - Response: \`chat_id\`, \`service\`, \`message.id\` (Linq message id). \`chat_id\` is shared across agents on the line — not wallet-owned.
-
-### Warmth pre-check
-
-- \`POST /api/messages/warmth\` — free SIWX; same \`to[]\` shape as send. Returns line-wide cold/warm per recipient, \`chat_id\` when warm, \`consecutive_unanswered_outbound\`, and \`send_blocked\`. Returned \`chat_id\` is a line reference, not wallet-owned — any agent may follow up.
 
 ## Sending line (shared)
 
@@ -159,7 +155,7 @@ Requires payment wallet + a \`SentMessage\` row for that \`linqMessageId\`. **$0
 
 ## Key agent endpoints
 
-- \`POST /api/messages/warmth\` — **required** cold/warm lookup before send or before telling the user cold/warm (free SIWX)
+- \`POST /api/messages/warmth\` — **required** cold/warm + \`quoted_price_usd\` before send or before telling the user cold/warm or cost (free SIWX)
 - \`POST /api/messages\` — send on iMessage → RCS → SMS; see **POST /api/messages** for cold/warm pricing
 - \`POST /api/chats/{chatId}/messages\` — warm follow-up in existing chat (surge pricing)
 - \`POST /api/chats/{chatId}/voicememo\` — iMessage voice memo in existing chat (surge pricing)
